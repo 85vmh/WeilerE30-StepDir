@@ -1,0 +1,1 @@
+sig+in.spindle-rev pin+weiler-e30.spindle.switch-rev-in pin+hm2_7i97.0.pwmgen.05.enable pin+hm2_7i97.0.pwmgen.05.value sig+out.nc-ready1 sig+out.nc-ready2 sig+out.spindle-on-pulse sig+in.spindle-fwd

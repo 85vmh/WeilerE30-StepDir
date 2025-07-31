@@ -1,0 +1,33 @@
+#**************************
+# In linuxcnc you can't have loadrt for a component in two different files.
+# This means you would need to either use numbered components, which makes it quite hard 
+# to follow, or define named components. But for this named components, you must specify
+# all the names in one place on the line that does loadrt
+# The order in which the hal files are processed is the order defined in the .ini file
+# Therefore this file should be specified among the first ones so that in this file we 
+# can define all the functions needed by the next hal files to load.
+#
+# The values after the names= must be specified without spaces between them
+#**************************
+
+loadrt not      names=not.machine-on,not.sp-on,not.sp-orient,not.index-pulse
+loadrt mult2    names=divider,pulsediv-x,pulsediv-z,mult.sp-pulse,mult.sign
+loadrt mux2     names=mux.gearbox,mux.value-switch,mux.off-delay,mux.sign
+loadrt and2     names=and.on-at-speed,and.should-orient,and.program-run,and.program-step,and.program-pause,and.program-resume,and.x-mpg-enable,and.z-mpg-enable
+loadrt or2      names=or.sp-enable,or.pause-resume
+
+addf    not.machine-on          servo-thread
+addf    not.sp-on               servo-thread
+addf    not.sp-orient           servo-thread
+addf    not.index-pulse         servo-thread
+addf    and.on-at-speed         servo-thread
+addf    and.should-orient       servo-thread
+addf    and.x-mpg-enable        servo-thread
+addf    and.z-mpg-enable        servo-thread
+
+addf    and.program-run         servo-thread
+addf    and.program-step        servo-thread
+addf    and.program-pause       servo-thread
+addf    and.program-resume      servo-thread
+addf    or.sp-enable	        servo-thread
+addf    or.pause-resume         servo-thread

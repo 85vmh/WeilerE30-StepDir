@@ -1,0 +1,13 @@
+# halshow watchlist created Sat Oct 05 12:40:57 EEST 2024
+
+sig+sp.enable
+sig+sp.gear-ratio
+sig+sp.revs
+pin+servo-thread.time
+param+servo-thread.tmax
+pin+ini.x.max_acceleration
+pin+ini.x.max_velocity
+pin+ini.z.max_velocity
+pin+ini.z.max_acceleration
+pin+ini.traj_default_velocity
+pin+ini.traj_max_velocity

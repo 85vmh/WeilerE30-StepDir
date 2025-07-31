@@ -1,0 +1,82 @@
+#*******************
+#   The commanded speed does not always matches the actual speed
+#   With lincurve we can correct that, this is specific for each spindle
+#*******************
+loadrt  lincurve    personality=16 #maximum 16 pairs
+loadrt  abs         names=abs.speed
+
+addf    lincurve.0  servo-thread
+addf    abs.speed   servo-thread
+addf    mult.sign   servo-thread    # loadrt performed in common-loadrt-addf.hal
+addf    mux.sign    servo-thread    # loadrt performed in common-loadrt-addf.hal
+
+# Define the values that we're gonna multiply the liniarized rpm 
+# to obtain the initial spindle direction
+setp    mux.sign.in0    1  # forward
+setp    mux.sign.in1   -1  # reverse
+
+# Define the lookup table: X represents the actual value, Y represents the target value
+setp lincurve.0.x-val-00 0
+setp lincurve.0.y-val-00 0
+
+# setp lincurve.0.x-val-01 710
+# setp lincurve.0.y-val-01 700
+
+# setp lincurve.0.x-val-02 710
+# setp lincurve.0.y-val-02 700
+
+setp lincurve.0.x-val-03 601
+setp lincurve.0.y-val-03 600
+
+setp lincurve.0.x-val-04 710
+setp lincurve.0.y-val-04 700
+
+setp lincurve.0.x-val-05 812
+setp lincurve.0.y-val-05 800
+
+setp lincurve.0.x-val-06 914
+setp lincurve.0.y-val-06 900
+
+setp lincurve.0.x-val-07 1016
+setp lincurve.0.y-val-07 1000
+
+setp lincurve.0.x-val-08 1270
+setp lincurve.0.y-val-08 1250
+
+setp lincurve.0.x-val-09 1522
+setp lincurve.0.y-val-09 1500
+
+setp lincurve.0.x-val-10 1774
+setp lincurve.0.y-val-10 1750
+
+setp lincurve.0.x-val-11 2025
+setp lincurve.0.y-val-11 2000
+
+setp lincurve.0.x-val-12 2275
+setp lincurve.0.y-val-12 2250
+
+setp lincurve.0.x-val-13 2530
+setp lincurve.0.y-val-13 2500
+
+setp lincurve.0.x-val-14 2780
+setp lincurve.0.y-val-14 2750
+
+setp lincurve.0.x-val-15 3035
+setp lincurve.0.y-val-15 3000
+
+
+# The rpm to liniarize can have negative value if the spindle is in reverse
+net sp.rpm-to-liniarize  => abs.speed.in
+
+# But the lincurve has max 16 pairs, so we only liniarize positive values  
+net sp.absolute-rpm         abs.speed.out   => lincurve.0.in
+
+# But we need the reverse, therefore we have a mux with values 1 and -1
+net sp.rpm-sign-mux         abs.speed.sign  => mux.sign.sel
+
+# Then we multiply the linearized value with the result of mux.sign
+net sp.rpm-sign             mux.sign.out    => mult.sign.in0
+net sp.rpm-val              lincurve.0.out  => mult.sign.in1         
+
+# And we write the result into a signal that will be used later
+net sp.liniarized-rpm    <= mult.sign.out

@@ -1,0 +1,93 @@
+#*********************
+# MPG related code for X and Z axes
+#*********************
+
+# Axis MPG
+
+#loadrt mult2 done in common-loadrt-addf.hal
+loadrt encoder          names=mpg.encoder-x,mpg.encoder-z
+loadrt ilowpass         names=mpg.lowpass-x,mpg.lowpass-z
+loadrt mux4             names=mux.increment
+loadrt anglejog         names=anglejog-x,anglejog-z
+loadrt scaled_s32_sums  names=sincounts,coscounts
+loadrt mux2s32          names=x-counts,z-counts
+
+addf x-counts   servo-thread
+addf z-counts   servo-thread
+addf encoder.capture-position   servo-thread
+addf encoder.update-counters    servo-thread
+addf mpg.lowpass-x              servo-thread
+addf mpg.lowpass-z              servo-thread
+addf mux.increment              servo-thread
+addf divider                    servo-thread
+addf anglejog-x                   servo-thread
+addf anglejog-z                   servo-thread
+addf sincounts                  servo-thread
+addf coscounts                  servo-thread
+
+
+setp anglejog-x.max-vel           50
+setp anglejog-x.max-accel         150
+setp anglejog-x.angle-degrees-in  -45
+
+setp anglejog-z.max-vel           50
+setp anglejog-z.max-accel         150
+setp anglejog-z.angle-degrees-in  45
+
+setp mpg.lowpass-x.scale 1250  #10000 divided by 4*2 (due to diameter mode)
+setp mpg.lowpass-z.scale -2500  #10000 divided by 4 
+
+# This is reponsible with the acceleration-deceleration curves, value between 0 and 1
+setp mpg.lowpass-x.gain  0.07
+setp mpg.lowpass-z.gain  0.07
+
+setp mpg.encoder-x.x4-mode  1
+setp mpg.encoder-z.x4-mode  1
+
+# Normally we configure only for axis.[letter]
+# by configuring it for joint.[number], we allow jogging when not homed yet.
+setp axis.x.jog-vel-mode 1
+setp axis.z.jog-vel-mode 1
+setp joint.0.jog-vel-mode 1
+setp joint.1.jog-vel-mode 1
+
+# enable jog when not yet homed
+setp joint.0.jog-enable 1 
+setp joint.1.jog-enable 1
+
+net mpg.x-jog-count  hm2_7i95.0.encoder.02.count  => mpg.lowpass-x.in   anglejog-x.counts-in
+net mpg.z-jog-count  hm2_7i95.0.encoder.03.count  => mpg.lowpass-z.in   anglejog-z.counts-in
+
+net mpg.x-filtered-counts  mpg.lowpass-x.out => x-counts.in0
+net mpg.z-filtered-counts  mpg.lowpass-z.out => z-counts.in0
+
+net cos-x anglejog-x.coscounts => coscounts.in0  
+net cos-z anglejog-z.coscounts => coscounts.in1
+net cos-xz coscounts.out-s  => x-counts.in1
+
+net sin-x anglejog-x.sincounts => sincounts.in0  
+net sin-z anglejog-z.sincounts => sincounts.in1
+net sin-xz sincounts.out-s  => z-counts.in1 
+
+net jog-counts-x  x-counts.out => axis.x.jog-counts    joint.0.jog-counts
+net jog-counts-z  z-counts.out => axis.z.jog-counts    joint.1.jog-counts
+
+
+# Jog increment switch (we multiplied by 10000)
+setp mux.increment.in0  0
+setp mux.increment.in1  0.0000001
+setp mux.increment.in2  0.000001
+setp mux.increment.in3  0.00001
+
+net in.jog-increment-a => mux.increment.sel0
+net in.jog-increment-b => mux.increment.sel1
+
+net mpg.increment  <= mux.increment.out
+net mpg.increment  => axis.x.jog-scale  axis.z.jog-scale  
+net mpg.increment  => joint.0.jog-scale  joint.1.jog-scale
+# net mpg.increment  => anglejog-x.scale-in anglejog-z.scale-in
+net mpg.increment  => divider.in0
+
+
+setp divider.in1  10000
+net mpg.readable-increment  divider.out anglejog-x.scale-in anglejog-z.scale-in

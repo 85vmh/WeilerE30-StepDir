@@ -1,0 +1,145 @@
+M4 G97 S1000
+Issuing EMC_TASK_SET_MODE -- 	 (  +504,+24,   +35,    +3,)
+NML_INTERP_LIST(0x55e0e4add2c0)::clear(): discarding 0 items
+NML_INTERP_LIST(0x55e0e4add2c0)::append(nml_msg_ptr{size=24,type=EMC_TASK_PLAN_SYNCH}) : list_size=1, line_number=0
+emcTaskPlanSynch() returned 0
+NML_INTERP_LIST(0x55e0e4add2c0)::get(): {size=24, type=EMC_TASK_PLAN_SYNCH}, list_size=0
+emcTaskPlanLevel() returned 0
+Issuing EMC_TASK_PLAN_SYNCH -- 	 (  +516,+24,    +0,)
+emcTaskPlanSynch() returned 0
+Issuing EMC_TASK_PLAN_EXECUTE -- 	 (  +509,+280,   +36,M4\032G97\032S1000,)
+emcTaskPlanLevel() returned 0
+NML_INTERP_LIST(0x55e0e4add2c0)::append(nml_msg_ptr{size=56,type=EMC_SPINDLE_SPEED}) : list_size=1, line_number=0
+NML_INTERP_LIST(0x55e0e4add2c0)::append(nml_msg_ptr{size=64,type=EMC_SPINDLE_ON}) : list_size=2, line_number=0
+emcTaskPlanExecute(M4 G97 S1000) returned 0
+emcTaskPlanLevel() returned 0
+NML_INTERP_LIST(0x55e0e4add2c0)::get(): {size=56, type=EMC_SPINDLE_SPEED}, list_size=1
+emcTaskPlanLevel() returned 0
+Issuing EMC_SPINDLE_SPEED -- 	 ( +1316,+56,    +0,-1000.000000,0.000000,0.000000,)
+NML_INTERP_LIST(0x55e0e4add2c0)::get(): {size=64, type=EMC_SPINDLE_ON}, list_size=0
+emcTaskPlanLevel() returned 0
+Issuing EMC_SPINDLE_ON -- 	 ( +1304,+64,    +0,-1000.000000,0.000000,0.000000,    +1,)
+mdi_execute_hook: MDI command 'M4 G97 S1000' done (remaining: 0)
+Issuing EMC_TASK_SET_MODE -- 	 (  +504,+24,   +37,    +1,)
+NML_INTERP_LIST(0x55e0e4add2c0)::clear(): discarding 0 items
+NML_INTERP_LIST(0x55e0e4add2c0)::append(nml_msg_ptr{size=24,type=EMC_TASK_PLAN_SYNCH}) : list_size=1, line_number=0
+NML_INTERP_LIST(0x55e0e4ad94c0)::clear(): discarding 0 items
+NML_INTERP_LIST(0x55e0e4add2c0)::clear(): discarding 1 items
+NML_INTERP_LIST(0x55e0e4add2c0)::append(nml_msg_ptr{size=24,type=EMC_TASK_PLAN_SYNCH}) : list_size=1, line_number=0
+NML_INTERP_LIST(0x55e0e4add2c0)::get(): {size=24, type=EMC_TASK_PLAN_SYNCH}, list_size=0
+emcTaskPlanLevel() returned 0
+Issuing EMC_TASK_PLAN_SYNCH -- 	 (  +516,+24,    +0,)
+emcTaskPlanSynch() returned 0
+onSpindleRunningChanged True
+
+
+
+
+
+16:43:45.233682: delayedFeed
+16:43:45.534109: startFeeding
+Get machine limits: 0
+Straight turning command for:  JoystickDirection.Z_PLUS
+Issuing EMC_TASK_SET_MODE -- 	 (  +504,+24,   +38,    +3,)
+NML_INTERP_LIST(0x55e0e4add2c0)::clear(): discarding 0 items
+NML_INTERP_LIST(0x55e0e4add2c0)::append(nml_msg_ptr{size=24,type=EMC_TASK_PLAN_SYNCH}) : list_size=1, line_number=0
+emcTaskPlanSynch() returned 0
+NML_INTERP_LIST(0x55e0e4add2c0)::get(): {size=24, type=EMC_TASK_PLAN_SYNCH}, list_size=0
+emcTaskPlanLevel() returned 0
+Issuing EMC_TASK_PLAN_SYNCH -- 	 (  +516,+24,    +0,)
+emcTaskPlanSynch() returned 0
+16:43:45.595227: execute mdi command: G95 F0.1 G40 G7 G53 G1 Z599.999
+Issuing EMC_TASK_PLAN_EXECUTE -- 	 (  +509,+280,   +39,G95\032F0.1\032G40\032G7\032G53\032G1\032Z599.999,)
+emcTaskPlanLevel() returned 0
+NML_INTERP_LIST(0x55e0e4add2c0)::append(nml_msg_ptr{size=120,type=EMC_TRAJ_SET_SPINDLESYNC}) : list_size=1, line_number=0
+NML_INTERP_LIST(0x55e0e4add2c0)::append(nml_msg_ptr{size=120,type=EMC_TRAJ_SET_SPINDLESYNC}) : list_size=2, line_number=0
+NML_INTERP_LIST(0x55e0e4add2c0)::append(nml_msg_ptr{size=208,type=EMC_TRAJ_LINEAR_MOVE}) : list_size=3, line_number=0
+emcTaskPlanExecute(G95 F0.1 G40 G7 G53 G1 Z599.999) returned 0
+emcTaskPlanLevel() returned 0
+NML_INTERP_LIST(0x55e0e4add2c0)::get(): {size=120, type=EMC_TRAJ_SET_SPINDLESYNC}, list_size=2
+emcTaskPlanLevel() returned 0
+Issuing EMC_TRAJ_SET_SPINDLESYNC -- 	 (  +232,+120,    +0,0.000000,\001,)
+NML_INTERP_LIST(0x55e0e4add2c0)::get(): {size=120, type=EMC_TRAJ_SET_SPINDLESYNC}, list_size=1
+emcTaskPlanLevel() returned 0
+Issuing EMC_TRAJ_SET_SPINDLESYNC -- 	 (  +232,+120,    +0,0.100000,\001,)
+NML_INTERP_LIST(0x55e0e4add2c0)::get(): {size=208, type=EMC_TRAJ_LINEAR_MOVE}, list_size=0
+emcTaskPlanLevel() returned 0
+Issuing EMC_TRAJ_LINEAR_MOVE -- 	 (  +220,+208,    +0,130.000000,0.000000,599.999000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,    +2,0.100000,100.000000,350.000000,    +1,    -1,)
+feed_override 1.0
+onInterpreterStateChanged 2
+
+
+
+
+
+Issuing EMC_TASK_SET_MODE -- 	 (  +504,+24,   +40,    +1,)
+NML_INTERP_LIST(0x55e0e4add2c0)::clear(): discarding 0 items
+NML_INTERP_LIST(0x55e0e4add2c0)::append(nml_msg_ptr{size=24,type=EMC_TASK_PLAN_SYNCH}) : list_size=1, line_number=0
+NML_INTERP_LIST(0x55e0e4ad94c0)::clear(): discarding 0 items
+NML_INTERP_LIST(0x55e0e4add2c0)::clear(): discarding 1 items
+NML_INTERP_LIST(0x55e0e4add2c0)::append(nml_msg_ptr{size=24,type=EMC_TASK_PLAN_SYNCH}) : list_size=1, line_number=0
+NML_INTERP_LIST(0x55e0e4add2c0)::get(): {size=24, type=EMC_TASK_PLAN_SYNCH}, list_size=0
+emcTaskPlanLevel() returned 0
+Issuing EMC_TASK_PLAN_SYNCH -- 	 (  +516,+24,    +0,)
+emcTaskPlanSynch() returned 0
+onInterpreterStateChanged 1
+handleJoystickNeutral
+stopFeeding
+feed_override 1.0
+
+
+
+
+
+16:43:56.033611: delayedFeed
+16:43:56.334766: startFeeding
+Get machine limits: 0
+Straight turning command for:  JoystickDirection.Z_PLUS
+Issuing EMC_TASK_SET_MODE -- 	 (  +504,+24,   +41,    +3,)
+NML_INTERP_LIST(0x55e0e4add2c0)::clear(): discarding 0 items
+NML_INTERP_LIST(0x55e0e4add2c0)::append(nml_msg_ptr{size=24,type=EMC_TASK_PLAN_SYNCH}) : list_size=1, line_number=0
+emcTaskPlanSynch() returned 0
+NML_INTERP_LIST(0x55e0e4add2c0)::get(): {size=24, type=EMC_TASK_PLAN_SYNCH}, list_size=0
+emcTaskPlanLevel() returned 0
+Issuing EMC_TASK_PLAN_SYNCH -- 	 (  +516,+24,    +0,)
+emcTaskPlanSynch() returned 0
+16:43:56.385507: execute mdi command: G95 F0.1 G40 G7 G53 G1 Z599.999
+Issuing EMC_TASK_PLAN_EXECUTE -- 	 (  +509,+280,   +42,G95\032F0.1\032G40\032G7\032G53\032G1\032Z599.999,)
+emcTaskPlanLevel() returned 0
+NML_INTERP_LIST(0x55e0e4add2c0)::append(nml_msg_ptr{size=120,type=EMC_TRAJ_SET_SPINDLESYNC}) : list_size=1, line_number=0
+NML_INTERP_LIST(0x55e0e4add2c0)::append(nml_msg_ptr{size=120,type=EMC_TRAJ_SET_SPINDLESYNC}) : list_size=2, line_number=0
+NML_INTERP_LIST(0x55e0e4add2c0)::append(nml_msg_ptr{size=208,type=EMC_TRAJ_LINEAR_MOVE}) : list_size=3, line_number=0
+emcTaskPlanExecute(G95 F0.1 G40 G7 G53 G1 Z599.999) returned 0
+emcTaskPlanLevel() returned 0
+NML_INTERP_LIST(0x55e0e4add2c0)::get(): {size=120, type=EMC_TRAJ_SET_SPINDLESYNC}, list_size=2
+emcTaskPlanLevel() returned 0
+Issuing EMC_TRAJ_SET_SPINDLESYNC -- 	 (  +232,+120,    +0,0.000000,\001,)
+NML_INTERP_LIST(0x55e0e4add2c0)::get(): {size=120, type=EMC_TRAJ_SET_SPINDLESYNC}, list_size=1
+emcTaskPlanLevel() returned 0
+Issuing EMC_TRAJ_SET_SPINDLESYNC -- 	 (  +232,+120,    +0,0.100000,\001,)
+NML_INTERP_LIST(0x55e0e4add2c0)::get(): {size=208, type=EMC_TRAJ_LINEAR_MOVE}, list_size=0
+emcTaskPlanLevel() returned 0
+Issuing EMC_TRAJ_LINEAR_MOVE -- 	 (  +220,+208,    +0,130.000000,0.000000,599.999000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,    +2,0.100000,100.000000,350.000000,    +1,    -1,)
+feed_override 1.0
+onInterpreterStateChanged 2
+
+
+
+
+
+Issuing EMC_TASK_SET_MODE -- 	 (  +504,+24,   +43,    +1,)
+NML_INTERP_LIST(0x55e0e4add2c0)::clear(): discarding 0 items
+NML_INTERP_LIST(0x55e0e4add2c0)::append(nml_msg_ptr{size=24,type=EMC_TASK_PLAN_SYNCH}) : list_size=1, line_number=0
+NML_INTERP_LIST(0x55e0e4ad94c0)::clear(): discarding 0 items
+NML_INTERP_LIST(0x55e0e4add2c0)::clear(): discarding 1 items
+NML_INTERP_LIST(0x55e0e4add2c0)::append(nml_msg_ptr{size=24,type=EMC_TASK_PLAN_SYNCH}) : list_size=1, line_number=0
+NML_INTERP_LIST(0x55e0e4add2c0)::get(): {size=24, type=EMC_TASK_PLAN_SYNCH}, list_size=0
+emcTaskPlanLevel() returned 0
+Issuing EMC_TASK_PLAN_SYNCH -- 	 (  +516,+24,    +0,)
+emcTaskPlanSynch() returned 0
+onInterpreterStateChanged 1
+handleJoystickNeutral
+stopFeeding
+feed_override 1.0
+Issuing EMC_SPINDLE_OFF -- 	 ( +1305,+32,   +44,)
+onSpindleRunningChanged False

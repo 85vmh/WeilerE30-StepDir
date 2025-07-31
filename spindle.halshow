@@ -1,0 +1,1 @@
+sig+sp.enable sig+sp.gear-ratio sig+sp.index-enable sig+sp.output sig+sp.pid-out sig+sp.revs sig+sp.vel-cmd-rpm sig+sp.vel-fb-rpm sig+sp.vel-fb-rps sig+in.spindle-low-gear pin+near.0.in1 pin+near.0.in2 pin+near.0.out

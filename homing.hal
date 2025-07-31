@@ -1,0 +1,27 @@
+#**************************
+# Home & Hard limits signals
+#**************************
+
+
+# hard limit switches
+net in.hard-x-minus     =>  joint.0.neg-lim-sw-in
+net in.hard-x-plus      =>  joint.0.pos-lim-sw-in
+
+net in.hard-z-plus      =>  joint.1.pos-lim-sw-in
+
+
+# home limit switches
+net in.home-x           =>  joint.0.home-sw-in
+net in.home-z           =>  joint.1.home-sw-in
+
+# the homing is done by moving the joystick toward X plus to home X axis, 
+# then towards Z+ to home the Z axis. The order is: X first, Z second
+net machine-is-on       =>  classicladder.0.in-00
+net in.joystick-x-plus  =>  classicladder.0.in-01
+net in.joystick-z-plus  =>  classicladder.0.in-02
+net x-is-homed          =>  classicladder.0.in-03
+net z-is-homed          =>  classicladder.0.in-04
+
+net out.home-x          classicladder.0.out-00  =>  halui.joint.0.home
+net out.home-z          classicladder.0.out-01  =>  halui.joint.1.home
+net out.home-inhibit    classicladder.0.out-02  =>  halui.abort

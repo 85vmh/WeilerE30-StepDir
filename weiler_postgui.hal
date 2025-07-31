@@ -1,0 +1,34 @@
+# These are the the connections made after the UI was launched and custom pins were created
+
+net in.spindle-rev          TeachInLathe.spindle.switch-rev-in
+net in.spindle-fwd          TeachInLathe.spindle.switch-fwd-in
+net in.spindle-gear1        TeachInLathe.spindle.is-first-gear
+net in.chuck-cover          TeachInLathe.spindle.cover-opened
+net sp.vel-fb-rpm           TeachInLathe.spindle.actual-rpm
+
+net in.joystick-x-plus      TeachInLathe.joystick.x-plus    =>  classicladder.0.in-11
+net in.joystick-x-minus     TeachInLathe.joystick.x-minus   =>  classicladder.0.in-12
+net in.joystick-z-plus      TeachInLathe.joystick.z-plus    =>  classicladder.0.in-13
+net in.joystick-z-minus     TeachInLathe.joystick.z-minus   =>  classicladder.0.in-14
+
+net in.joystick-rapid       TeachInLathe.joystick.rapid
+net out.power-feeding       TeachInLathe.app-status.power-feeding  => classicladder.0.in-10
+
+net mpg.readable-increment  TeachInLathe.handwheels.jog-increment
+
+net mpg.x-enable.in0        TeachInLathe.handwheels.x-enable    =>  and.x-mpg-enable.in0
+net mpg.z-enable.in0        TeachInLathe.handwheels.z-enable    =>  and.z-mpg-enable.in0
+net pwr-feed.is-manual      and.x-mpg-enable.in1    and.z-mpg-enable.in1
+
+net mpg.x-enable.out        and.x-mpg-enable.out    =>  axis.x.jog-enable
+net mpg.z-enable.out        and.z-mpg-enable.out    =>  axis.z.jog-enable
+
+
+net in.cycle-start          TeachInLathe.button.cycle-start
+net in.cycle-abort          TeachInLathe.button.cycle-stop
+
+
+net xmin TeachInLathe.axis-limits.x-min   => ini.x.min_limit
+net xmax TeachInLathe.axis-limits.x-max   => ini.x.max_limit
+net zmin TeachInLathe.axis-limits.z-min   => ini.z.min_limit
+net zmax TeachInLathe.axis-limits.z-max   => ini.z.max_limit

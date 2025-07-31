@@ -1,0 +1,160 @@
+#*******************
+#  SPINDLE
+#*******************
+loadrt  limit2    	    names=limit.speed
+loadrt  scale           names=scale.gearbox
+loadrt  near            names=near.at-speed
+loadrt  orient          names=orient
+loadrt  timedelay       names=timedelay.enable
+loadrt  tristate_bit    count=1
+loadrt  oneshot         count=1
+
+addf    limit.speed     		servo-thread	
+addf    mux.gearbox             servo-thread
+addf    mux.value-switch        servo-thread
+addf    mux.off-delay           servo-thread
+addf    scale.gearbox           servo-thread
+addf    near.at-speed           servo-thread
+addf    timedelay.enable        servo-thread
+addf    tristate-bit.0          servo-thread
+addf    oneshot.0               servo-thread
+#forum says that the order matters here
+addf    orient                  servo-thread 
+addf    pid.o.do-pid-calcs      servo-thread
+
+setp    limit.speed.maxv        [SPINDLE_0]ACCELERATION 
+
+setp    pid.o.Pgain             [SPINDLE_0]P
+setp    pid.o.Igain             [SPINDLE_0]I
+setp    pid.o.Dgain             [SPINDLE_0]D
+setp    pid.o.bias              [SPINDLE_0]BIAS
+setp    pid.o.FF0               [SPINDLE_0]FF0
+setp    pid.o.FF1               [SPINDLE_0]FF1
+setp    pid.o.FF2               [SPINDLE_0]FF2
+setp    pid.o.deadband          [SPINDLE_0]DEADBAND
+setp    pid.o.maxoutput         [SPINDLE_0]MAX_OUTPUT
+setp    pid.o.error-previous-target true
+
+setp    orient.tolerance    [SPINDLE_0]ORIENT_TOLERANCE
+
+# ---Encoder feedback signals/setup---
+setp    hm2_7i95.0.encoder.05.counter-mode          0
+setp    hm2_7i95.0.encoder.05.filter                0
+setp    hm2_7i95.0.encoder.05.index-invert          0
+setp    hm2_7i95.0.encoder.05.index-mask            0
+setp    hm2_7i95.0.encoder.05.index-mask-invert     0
+setp    hm2_7i95.0.encoder.05.scale             [SPINDLE_0]ENCODER_SCALE
+
+setp    hm2_7i95.0.pwmgen.00.output-type        1 #PWM pin0
+setp    hm2_7i95.0.pwmgen.00.offset-mode        0
+setp    hm2_7i95.0.pwmgen.pwm_frequency         20000 #20kHz
+setp    hm2_7i95.0.pwmgen.00.scale              [SPINDLE_0]OUTPUT_SCALE
+
+setp    hm2_7i95.0.gpio.009.is_output           true
+
+setp    mux.gearbox.in1     0.001412
+setp    mux.gearbox.in0     0.000333
+
+setp    near.at-speed.scale        1.000000
+setp    near.at-speed.difference   0.300000
+
+setp    timedelay.enable.on-delay 	0
+setp    mux.off-delay.in0           0
+setp    mux.off-delay.in1           [SPINDLE_0]ORIENT_DELAY	
+
+setp    oneshot.0.width          0.1
+setp    tristate-bit.0.in        1
+
+
+net sp.orient-delay     mux.off-delay.out    =>  timedelay.enable.off-delay	
+
+net in.spindle-gear1    mux.gearbox.sel
+net sp.gear-ratio       mux.gearbox.out   => scale.gearbox.gain
+
+# Spindle sync
+#net enc-reset1      hm2_7i95.0.encoder.05.input-index   =>  not.index-pulse.in
+#net enc-reset2      not.index-pulse.out     =>  hm2_7i95.0.encoder.05.reset
+
+net enable-bit          oneshot.0.out   =>  tristate-bit.0.enable
+net spindle-sync    <=  tristate-bit.0.out
+net spindle-sync    =>  spindle.0.index-enable
+net spindle-sync    =>  hm2_7i95.0.encoder.05.index-enable
+net spindle-sync    =>  pid.o.index-enable
+sets spindle-sync 1 # Set this initially to true, it will be turned off at first index pulse
+
+# Spindle orient linking
+net sp.orient-angle     spindle.0.orient-angle  =>  orient.angle 
+net sp.orient-mode      spindle.0.orient-mode   =>  orient.mode
+net sp.is-oriented      orient.is-oriented      =>  spindle.0.is-oriented
+net sp.orient-command   orient.command          =>  pid.o.command
+
+net sp.orient-enable    <=  spindle.0.orient
+net sp.orient-enable    =>  and.should-orient.in0   
+net sp.orient-enable    =>  not.sp-orient.in
+
+net sp.is-on    spindle.0.on    =>  timedelay.enable.in
+
+net delayed-enable  <=  timedelay.enable.out
+net delayed-enable  =>  or.sp-enable.in0  
+net delayed-enable  =>  not.sp-on.in
+
+net spindle-off         not.sp-on.out   =>  and.should-orient.in1
+
+#should orient only when spindle-on is OFF and orient is ON
+net and.should-orient   <=  and.should-orient.out
+net and.should-orient   =>  pid.o.enable
+net and.should-orient   =>  orient.enable
+net and.should-orient   =>  or.sp-enable.in1    
+net and.should-orient   =>  mux.value-switch.sel #this will toggle beween the speed and pid.o
+net and.should-orient   =>  mux.off-delay.sel #this will toggle between the off delay times
+net and.should-orient   =>  oneshot.0.in #this will trigger the index-enable
+
+# Velocity PID is enabled only when not orient
+net sp.enable           or.sp-enable.out    =>  hm2_7i95.0.pwmgen.00.enable => hm2_[MESA](BOARD).0.ssr.00.out-05
+
+#---------------------
+net sp.vel-fb-rpm   <=  hm2_7i95.0.encoder.05.velocity-rpm  # required for UI
+
+# Speed liniarization is done in: spindle-lincurve.hal
+net sp.rpm-to-liniarize     <=  spindle.0.speed-out
+
+# this has sign depending on the direction
+#net sp.liniarized-rpm       =>  limit.speed.in 
+
+# This does not have sign
+net sp.rpm-val              =>  limit.speed.in
+
+
+# Encoder velocity
+net sp.vel-fb-rps   <=  hm2_7i95.0.encoder.05.velocity
+net sp.vel-fb-rps   =>  spindle.0.speed-in
+net sp.vel-fb-rps   =>  near.at-speed.in2
+
+# Encoder position
+net sp.revs <=  hm2_7i95.0.encoder.05.position
+net sp.revs =>  spindle.0.revs   
+net sp.revs =>  pid.o.feedback 
+net sp.revs =>  orient.position
+
+#Switch between velocity command and pid.o (speed and orient)
+net sp.vel-cmd      limit.speed.out         =>  mux.value-switch.in0 
+net sp.pos-pid      pid.o.output            =>  mux.value-switch.in1
+net sp.gearbox-in   mux.value-switch.out    =>  scale.gearbox.in
+net sp.gearbox-out  scale.gearbox.out       =>  hm2_7i95.0.pwmgen.00.value 
+
+#Consider spindle at speed only when its running
+net sp.vel-cmd-rps  spindle.0.speed-out-rps             => near.at-speed.in1
+net sp.near-speed   near.at-speed.out                   => and.on-at-speed.in0
+net sp.is-running   halui.spindle.0.is-on               => and.on-at-speed.in1
+net sp.at-speed     and.on-at-speed.out                 => spindle.0.at-speed
+
+net spindir spindle.0.forward   =>  hm2_7i95.0.gpio.009.out
+
+#Spindle cover safety mechanism
+net in.chuck-cover      =>  classicladder.0.in-05   
+net in.requested-fwd    halui.spindle.0.runs-forward    =>  classicladder.0.in-06 
+net in.requested-rev    halui.spindle.0.runs-backward   =>  classicladder.0.in-07
+net in.spindle-neutral  =>  classicladder.0.in-08
+net out.sp-inhibit      classicladder.0.out-03          =>  spindle.0.inhibit
+net out.sp-stop         classicladder.0.out-04          =>  halui.spindle.0.stop
+net in.is-auto-mode     halui.mode.is-auto              =>  classicladder.0.in-17

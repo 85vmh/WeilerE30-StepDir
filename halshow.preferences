@@ -1,0 +1,27 @@
+# Halshow settings
+# This file is generated automatically.
+wm geometry . 1024x666+548+149
+placeFrames 0.38308457711442784
+set ::ratio 0.38308457711442784
+set ::old_w_leftf 160
+set ::watchlist {
+    pin+iocontrol.0.tool-change
+    pin+iocontrol.0.tool-changed
+    pin+iocontrol.0.tool-number
+    pin+iocontrol.0.tool-prep-index
+    pin+iocontrol.0.tool-prep-number
+    pin+iocontrol.0.tool-prep-pocket
+    pin+iocontrol.0.tool-prepare
+    pin+iocontrol.0.user-enable-out
+    pin+iocontrol.0.user-request-enable
+    pin+qtpyvcp_manualtoolchange.change
+    pin+qtpyvcp_manualtoolchange.changed
+    pin+qtpyvcp_manualtoolchange.number
+}
+set ::workmode watchhal
+set ::watchInterval 10
+set ::col1_width 100
+set ::ffmts 
+set ::ifmts 
+set ::alwaysOnTop 0
+set ::autoSaveWatchlist 1

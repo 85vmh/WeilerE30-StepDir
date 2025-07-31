@@ -1,0 +1,95 @@
+
+addf mux.spindle-override   servo-thread
+addf mux.feed-override      servo-thread
+addf mux.rapid-override     servo-thread
+
+#Spindle override
+setp mux.spindle-override.use-graycode 1
+setp mux.spindle-override.in00 0
+setp mux.spindle-override.in01 50
+setp mux.spindle-override.in02 55
+setp mux.spindle-override.in03 60
+setp mux.spindle-override.in04 65
+setp mux.spindle-override.in05 70
+setp mux.spindle-override.in06 75
+setp mux.spindle-override.in07 80
+setp mux.spindle-override.in08 85
+setp mux.spindle-override.in09 90
+setp mux.spindle-override.in10 95
+setp mux.spindle-override.in11 100
+setp mux.spindle-override.in12 105
+setp mux.spindle-override.in13 110
+setp mux.spindle-override.in14 115
+setp mux.spindle-override.in15 120
+
+net in.spindle-override-a => mux.spindle-override.sel0
+net in.spindle-override-b => mux.spindle-override.sel1
+net in.spindle-override-c => mux.spindle-override.sel2
+net in.spindle-override-d => mux.spindle-override.sel3
+
+setp halui.spindle.0.override.count-enable 1
+setp halui.spindle.0.override.direct-value 1
+setp halui.spindle.0.override.scale 0.01
+
+net out.spindle-override  mux.spindle-override.out-s  =>  halui.spindle.0.override.counts
+
+
+#Feed override
+setp mux.feed-override.use-graycode 1
+setp mux.feed-override.in00 0
+setp mux.feed-override.in01 0
+setp mux.feed-override.in02 10
+setp mux.feed-override.in03 20
+setp mux.feed-override.in04 30
+setp mux.feed-override.in05 40
+setp mux.feed-override.in06 50
+setp mux.feed-override.in07 60
+setp mux.feed-override.in08 70
+setp mux.feed-override.in09 80
+setp mux.feed-override.in10 90
+setp mux.feed-override.in11 95
+setp mux.feed-override.in12 100
+setp mux.feed-override.in13 105
+setp mux.feed-override.in14 110
+setp mux.feed-override.in15 120
+
+net in.feed-override-a => mux.feed-override.sel0
+net in.feed-override-b => mux.feed-override.sel1
+net in.feed-override-c => mux.feed-override.sel2
+net in.feed-override-d => mux.feed-override.sel3
+
+setp halui.feed-override.count-enable 1
+setp halui.feed-override.direct-value 1
+setp halui.feed-override.scale 0.01
+
+net out.feed-override  mux.feed-override.out-s  =>  halui.feed-override.counts
+
+#Rapid override
+setp mux.rapid-override.use-graycode 1
+setp mux.rapid-override.in00 0
+setp mux.rapid-override.in01 0
+setp mux.rapid-override.in02 10
+setp mux.rapid-override.in03 20
+setp mux.rapid-override.in04 30
+setp mux.rapid-override.in05 40
+setp mux.rapid-override.in06 50
+setp mux.rapid-override.in07 60
+setp mux.rapid-override.in08 70
+setp mux.rapid-override.in09 80
+setp mux.rapid-override.in10 90
+setp mux.rapid-override.in11 95
+setp mux.rapid-override.in12 100
+setp mux.rapid-override.in13 100
+setp mux.rapid-override.in14 100
+setp mux.rapid-override.in15 100
+
+net in.feed-override-a => mux.rapid-override.sel0
+net in.feed-override-b => mux.rapid-override.sel1
+net in.feed-override-c => mux.rapid-override.sel2
+net in.feed-override-d => mux.rapid-override.sel3
+
+setp halui.rapid-override.count-enable 1
+setp halui.rapid-override.direct-value 1
+setp halui.rapid-override.scale 0.01
+
+#net out.rapid-override  mux.rapid-override.out-s  =>  halui.rapid-override.counts

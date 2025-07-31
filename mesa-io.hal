@@ -1,0 +1,47 @@
+#******************************
+#All digital inputs/outputs
+#******************************
+
+#------Mesa 7i70 Digital Inputs Card---------
+#TB3 Socket 1
+net in.estop-free           <=  hm2_7i95.0.7i70.0.0.input-00
+net in.drives-enabled       <=  hm2_7i95.0.7i70.0.0.input-01
+net in.hard-x-minus         <=  hm2_7i95.0.7i70.0.0.input-02-not
+net in.hard-x-plus          <=  hm2_7i95.0.7i70.0.0.input-03-not
+net in.hard-z-plus          <=  hm2_7i95.0.7i70.0.0.input-04-not
+net in.home-x               <=  hm2_7i95.0.7i70.0.0.input-05-not
+net in.home-z               <=  hm2_7i95.0.7i70.0.0.input-06-not
+net in.chuck-cover          <=  hm2_7i95.0.7i70.0.0.input-07-not
+
+#TB3 Socket 2
+net in.jog-increment-a      <=  hm2_7i95.0.7i70.0.0.input-08
+net in.jog-increment-b      <=  hm2_7i95.0.7i70.0.0.input-09
+net in.joystick-neutral     <=  hm2_7i95.0.7i70.0.0.input-10
+net in.joystick-x-plus      <=  hm2_7i95.0.7i70.0.0.input-11
+net in.joystick-x-minus     <=  hm2_7i95.0.7i70.0.0.input-12
+net in.joystick-z-plus      <=  hm2_7i95.0.7i70.0.0.input-13
+net in.joystick-z-minus     <=  hm2_7i95.0.7i70.0.0.input-14
+net in.joystick-rapid       <=  hm2_7i95.0.7i70.0.0.input-15
+
+#TB3 Socket 3
+net in.spindle-override-a   <=  hm2_7i95.0.7i70.0.0.input-16
+net in.spindle-override-b   <=  hm2_7i95.0.7i70.0.0.input-17
+net in.spindle-override-c   <=  hm2_7i95.0.7i70.0.0.input-18
+net in.spindle-override-d   <=  hm2_7i95.0.7i70.0.0.input-19  
+net in.spindle-neutral      <=  hm2_7i95.0.7i70.0.0.input-20
+net in.spindle-fwd          <=  hm2_7i95.0.7i70.0.0.input-21
+net in.spindle-rev          <=  hm2_7i95.0.7i70.0.0.input-22
+net in.spindle-gear1        <=  hm2_7i95.0.7i70.0.0.input-23
+
+#TB2 Socket 1
+net in.feed-override-a      <=  hm2_7i95.0.7i70.0.0.input-24
+net in.feed-override-b      <=  hm2_7i95.0.7i70.0.0.input-25
+net in.feed-override-c      <=  hm2_7i95.0.7i70.0.0.input-26
+net in.feed-override-d      <=  hm2_7i95.0.7i70.0.0.input-27
+net in.cycle-start          <=  hm2_7i95.0.7i70.0.0.input-28
+net in.cycle-abort          <=  hm2_7i95.0.7i70.0.0.input-29-not
+
+#------Mesa 7i97 Analog Servo Interface--------
+#TB5 Socket 3
+net out.nc-ready            <=  hm2_7i95.0.ssr.00.out-00
+net out.lube-pump           <=  hm2_7i95.0.ssr.00.out-01

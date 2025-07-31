@@ -1,0 +1,180 @@
+# kinematics
+loadrt  [KINS](KINEMATICS)
+
+# motion controller
+loadrt  [EMCMOT](EMCMOT) servo_period_nsec=[EMCMOT](SERVO_PERIOD) num_joints=[KINS](JOINTS)
+
+# hostmot2 driver
+loadrt  hostmot2
+loadrt  [HM2](DRIVER) board_ip=[HM2](ADDRESS) config="num_encoders=6 num_stepgens=2 sserial_port_0=00000000"
+
+setp    hm2_[MESA](BOARD).0.watchdog.timeout_ns 5000000
+
+loadrt  pid     names=pid.x,pid.z,pid.s,pid.o
+loadrt  mux16   names=mux.spindle-override,mux.feed-override,mux.rapid-override
+
+
+loadrt  classicladder_rt numPhysInputs=[PLC](HAL_INPUTS) numPhysOutputs=[PLC](HAL_OUTPUTS) numTimersIec=[PLC](TIMERS)
+#loadusr classicladder WeilerE30.clp
+loadusr classicladder --nogui WeilerE30.clp
+loadusr -W hal_manualtoolchange
+
+# THREADS
+addf    hm2_[MESA](BOARD).0.read    servo-thread
+addf    motion-command-handler      servo-thread
+addf    motion-controller           servo-thread
+addf    pid.x.do-pid-calcs          servo-thread
+addf    pid.z.do-pid-calcs          servo-thread
+addf    hm2_[MESA](BOARD).0.write   servo-thread
+addf    classicladder.0.refresh     servo-thread
+
+# DPLL TIMER
+setp    hm2_[MESA](BOARD).0.dpll.01.timer-us        -50
+setp    hm2_[MESA](BOARD).0.stepgen.timer-number    1
+
+#*******************
+#  AXIS X JOINT 0
+#*******************
+# PID parameters
+setp    pid.x.Pgain     [JOINT_0](P)
+setp    pid.x.Igain     [JOINT_0](I)
+setp    pid.x.Dgain     [JOINT_0](D)
+setp    pid.x.bias      [JOINT_0](BIAS)
+setp    pid.x.FF0       [JOINT_0](FF0)
+setp    pid.x.FF1       [JOINT_0](FF1)
+setp    pid.x.FF2       [JOINT_0](FF2)
+setp    pid.x.deadband  [JOINT_0](DEADBAND)
+setp    pid.x.maxoutput [JOINT_0](MAX_OUTPUT)
+setp    pid.x.maxerror  [JOINT_0](MAX_ERROR)
+setp    pid.x.error-previous-target True
+
+# Joint 0 StepGen parameters
+setp    hm2_[MESA](BOARD).0.stepgen.00.dirsetup         [JOINT_0](DIRSETUP)
+setp    hm2_[MESA](BOARD).0.stepgen.00.dirhold          [JOINT_0](DIRHOLD)
+setp    hm2_[MESA](BOARD).0.stepgen.00.steplen          [JOINT_0](STEPLEN)
+setp    hm2_[MESA](BOARD).0.stepgen.00.stepspace        [JOINT_0](STEPSPACE)
+setp    hm2_[MESA](BOARD).0.stepgen.00.position-scale   [JOINT_0](STEP_SCALE)
+setp    hm2_[MESA](BOARD).0.stepgen.00.maxvel           [JOINT_0](STEPGEN_MAX_VEL)
+setp    hm2_[MESA](BOARD).0.stepgen.00.maxaccel         [JOINT_0](STEPGEN_MAX_ACC)
+setp    hm2_[MESA](BOARD).0.stepgen.00.step_type        0
+setp    hm2_[MESA](BOARD).0.stepgen.00.control-type     1
+
+# Encoder feedback parameters
+setp    hm2_[MESA](BOARD).0.encoder.00.counter-mode         0
+setp    hm2_[MESA](BOARD).0.encoder.00.filter               1
+setp    hm2_[MESA](BOARD).0.encoder.00.index-invert         0
+setp    hm2_[MESA](BOARD).0.encoder.00.index-mask           0
+setp    hm2_[MESA](BOARD).0.encoder.00.index-mask-invert    0
+setp    hm2_[MESA](BOARD).0.encoder.00.scale                [JOINT_0](ENCODER_SCALE)
+
+net joint0.index-enable     <=  pid.x.index-enable
+net joint0.index-enable     =>  joint.0.index-enable
+net joint0.index-enable     =>  hm2_[MESA](BOARD).0.encoder.00.index-enable
+
+net joint0.enable   <=  joint.0.amp-enable-out
+net joint0.enable   =>  pid.x.enable
+net joint0.enable   =>  hm2_[MESA](BOARD).0.stepgen.00.enable
+net joint0.enable   =>  hm2_[MESA](BOARD).0.ssr.00.out-03
+
+# position command and feedback
+net joint0.pos-cmd joint.0.motor-pos-cmd    => pid.x.command
+
+net joint0.pos-fb   <= hm2_[MESA](BOARD).0.encoder.00.position
+net joint0.pos-fb   => joint.0.motor-pos-fb
+net joint0.pos-fb   => pid.x.feedback
+
+net joint0.output  pid.x.output     =>  hm2_[MESA](BOARD).0.stepgen.00.velocity-cmd
+
+
+#*******************
+#  AXIS Z JOINT 1
+#*******************
+# PID parameters
+setp    pid.z.Pgain     [JOINT_1](P)
+setp    pid.z.Igain     [JOINT_1](I)
+setp    pid.z.Dgain     [JOINT_1](D)
+setp    pid.z.bias      [JOINT_1](BIAS)
+setp    pid.z.FF0       [JOINT_1](FF0)
+setp    pid.z.FF1       [JOINT_1](FF1)
+setp    pid.z.FF2       [JOINT_1](FF2)
+setp    pid.z.deadband  [JOINT_1](DEADBAND)
+setp    pid.z.maxoutput [JOINT_1](MAX_OUTPUT)
+setp    pid.z.maxerror  [JOINT_1](MAX_ERROR)
+setp    pid.z.error-previous-target True
+
+# Joint 1 StepGen parameters
+setp    hm2_[MESA](BOARD).0.stepgen.01.dirsetup         [JOINT_1](DIRSETUP)
+setp    hm2_[MESA](BOARD).0.stepgen.01.dirhold          [JOINT_1](DIRHOLD)
+setp    hm2_[MESA](BOARD).0.stepgen.01.steplen          [JOINT_1](STEPLEN)
+setp    hm2_[MESA](BOARD).0.stepgen.01.stepspace        [JOINT_1](STEPSPACE)
+setp    hm2_[MESA](BOARD).0.stepgen.01.position-scale   [JOINT_1](STEP_SCALE)
+setp    hm2_[MESA](BOARD).0.stepgen.01.maxvel           [JOINT_1](STEPGEN_MAX_VEL)
+setp    hm2_[MESA](BOARD).0.stepgen.01.maxaccel         [JOINT_1](STEPGEN_MAX_ACC)
+setp    hm2_[MESA](BOARD).0.stepgen.01.step_type        0
+setp    hm2_[MESA](BOARD).0.stepgen.01.control-type     1
+
+# Encoder feedback parameters
+setp    hm2_[MESA](BOARD).0.encoder.01.counter-mode         0
+setp    hm2_[MESA](BOARD).0.encoder.01.filter               1
+setp    hm2_[MESA](BOARD).0.encoder.01.index-invert         0
+setp    hm2_[MESA](BOARD).0.encoder.01.index-mask           0
+setp    hm2_[MESA](BOARD).0.encoder.01.index-mask-invert    0
+setp    hm2_[MESA](BOARD).0.encoder.01.scale                [JOINT_1](ENCODER_SCALE)
+
+net joint1.index-enable     <=  joint.1.index-enable
+net joint1.index-enable     =>  pid.z.index-enable
+net joint1.index-enable     =>  hm2_[MESA](BOARD).0.encoder.01.index-enable
+
+net joint1.enable   <=  joint.1.amp-enable-out
+net joint1.enable   =>  pid.z.enable
+net joint1.enable   =>  hm2_[MESA](BOARD).0.stepgen.01.enable
+net joint1.enable   =>  hm2_[MESA](BOARD).0.ssr.00.out-04
+
+# position command and feedback
+net joint1.pos-cmd  <= joint.1.motor-pos-cmd
+net joint1.pos-cmd  => pid.z.command
+
+net joint1.pos-fb   <= hm2_[MESA](BOARD).0.encoder.01.position
+net joint1.pos-fb   => joint.1.motor-pos-fb
+net joint1.pos-fb   => pid.z.feedback
+
+net joint1.output   pid.z.output    => hm2_[MESA](BOARD).0.stepgen.01.velocity-cmd
+
+#******************************
+# connect miscellaneous signals
+#******************************
+
+#  ---HALUI signals---
+
+net axis-select-x           halui.axis.x.select
+net jog-x-pos               halui.axis.x.plus
+net jog-x-neg               halui.axis.x.minus
+net jog-x-analog            halui.axis.x.analog
+net x-is-homed              halui.joint.0.is-homed
+net axis-select-z           halui.axis.z.select
+net jog-z-pos               halui.axis.z.plus
+net jog-z-neg               halui.axis.z.minus
+net jog-z-analog            halui.axis.z.analog
+net z-is-homed              halui.joint.1.is-homed
+net jog-selected-pos        halui.axis.selected.plus
+net jog-selected-neg        halui.axis.selected.minus
+net machine-is-on           halui.machine.is-on
+net jog-speed               halui.axis.jog-speed
+net MDI-mode                halui.mode.is-mdi
+
+#  ---motion control signals---
+
+net in-position               <=  motion.in-position
+net machine-is-enabled        <=  motion.motion-enabled
+
+#  ---manual tool change signals---
+
+net tool:change     iocontrol.0.tool-change         =>  hal_manualtoolchange.change
+net tool:changed    hal_manualtoolchange.changed    =>  iocontrol.0.tool-changed
+net tool:number     iocontrol.0.tool-prep-number    =>  hal_manualtoolchange.number
+#  ---ignore tool prepare requests---
+net tool:prepare    iocontrol.0.tool-prepare        =>  iocontrol.0.tool-prepared
+
+
+# initial lube condition, only when machine is enabled
+#net out.lube-pump <= halui.machine.is-on

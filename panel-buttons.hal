@@ -1,0 +1,44 @@
+#**************************
+#Panel buttons
+#**************************
+
+loadrt toggle       names=toggle.pause-resume
+loadrt toggle2nist  names=nistToggle.pause-resume
+
+
+addf toggle.pause-resume      servo-thread
+addf nistToggle.pause-resume  servo-thread
+
+
+#Power & Estop
+net in.estop-free       => iocontrol.0.emc-enable-in
+net in.drives-enabled   => classicladder.0.in-18
+net out.machine-on      classicladder.0.out-18  =>  halui.machine.on
+net out.machine-off     classicladder.0.out-19  =>  halui.machine.off
+net out-program-stop    classicladder.0.out-06  =>  halui.program.stop
+
+
+#Joystick actions
+#Power feed
+net pwr-feed.is-manual      halui.mode.is-manual    => classicladder.0.in-15
+net pwr-feed.feed-hold      classicladder.0.out-10  => motion.feed-hold
+net pwr-feed.set-manual     classicladder.0.out-11  => halui.mode.manual
+
+
+#CycleStart button - handles run/step
+#CycleStop button - handles pause/resume
+net in.cycle-start  =>  and.program-run.in0     and.program-step.in0
+net in.cycle-abort  =>  and.program-pause.in0   and.program-resume.in0  classicladder.0.in-19  
+
+net green-btn.idle-on   halui.program.is-idle       => and.program-run.in1  classicladder.0.in-20
+net green-btn.run-sig   and.program-run.out         => halui.program.run    halui.mode.auto # check if we want auto now  
+net green-btn.step-sig  and.program-step.out        => halui.program.step
+
+net red-btn.pause-on    halui.program.is-paused     => and.program-pause.in1    and.program-step.in1    nistToggle.pause-resume.is-on  
+net red-btn.run-on      halui.program.is-running    => and.program-resume.in1
+net red-btn.pause-sig   and.program-pause.out       => or.pause-resume.in0
+net red-btn.resume-sig  and.program-resume.out      => or.pause-resume.in1 
+net red-btn.toggle-ok   or.pause-resume.out         => toggle.pause-resume.in 
+net red-btn.toggle-sig  toggle.pause-resume.out     => nistToggle.pause-resume.in 
+net red-btn.toggle-on   nistToggle.pause-resume.on  => halui.program.pause
+net red-btn.toggle-off  nistToggle.pause-resume.off => halui.program.resume
