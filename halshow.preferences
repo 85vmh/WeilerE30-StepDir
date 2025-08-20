@@ -1,22 +1,37 @@
 # Halshow settings
 # This file is generated automatically.
-wm geometry . 1024x666+548+149
+wm geometry . 859x834+1033+35
 placeFrames 0.38308457711442784
 set ::ratio 0.38308457711442784
 set ::old_w_leftf 160
 set ::watchlist {
-    pin+iocontrol.0.tool-change
-    pin+iocontrol.0.tool-changed
-    pin+iocontrol.0.tool-number
-    pin+iocontrol.0.tool-prep-index
-    pin+iocontrol.0.tool-prep-number
-    pin+iocontrol.0.tool-prep-pocket
-    pin+iocontrol.0.tool-prepare
-    pin+iocontrol.0.user-enable-out
-    pin+iocontrol.0.user-request-enable
-    pin+qtpyvcp_manualtoolchange.change
-    pin+qtpyvcp_manualtoolchange.changed
-    pin+qtpyvcp_manualtoolchange.number
+    pin+TeachInLathe.app-status.power-feeding
+    pin+motion.feed-inhibit
+    pin+halui.mode.is-mdi
+    pin+halui.mode.is-manual
+    pin+halui.program.is-paused
+    pin+halui.program.is-idle
+    pin+halui.program.is-running
+    sig+in.joystick-neutral
+    pin+axis.x.jog-enable
+    pin+motion.feed-upm
+    pin+halui.mode.manual
+    pin+TeachInLathe.joystick.rapid
+    pin+TeachInLathe.joystick.x-minus
+    pin+TeachInLathe.joystick.x-plus
+    pin+TeachInLathe.joystick.z-minus
+    pin+TeachInLathe.joystick.z-plus
+    pin+classicladder.0.out-18
+    sig+out.machine-on
+    pin+halui.machine.is-on
+    pin+halui.machine.off
+    pin+halui.machine.on
+    pin+halui.mode.is-auto
+    pin+halui.mode.auto
+    sig+pwr-feed.allows-mpg
+    pin+TeachInLathe.handwheels.x-enable
+    sig+pwr-feed.set-manual
+    pin+classicladder.0.out-11
 }
 set ::workmode watchhal
 set ::watchInterval 10

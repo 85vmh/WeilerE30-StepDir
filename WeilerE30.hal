@@ -15,18 +15,18 @@ loadrt  mux16   names=mux.spindle-override,mux.feed-override,mux.rapid-override
 
 
 loadrt  classicladder_rt numPhysInputs=[PLC](HAL_INPUTS) numPhysOutputs=[PLC](HAL_OUTPUTS) numTimersIec=[PLC](TIMERS)
-#loadusr classicladder WeilerE30.clp
-loadusr classicladder --nogui WeilerE30.clp
+loadusr classicladder --nogui WeilerESeries.clp
 loadusr -W hal_manualtoolchange
 
 # THREADS
 addf    hm2_[MESA](BOARD).0.read    servo-thread
+addf    classicladder.0.refresh     servo-thread
 addf    motion-command-handler      servo-thread
 addf    motion-controller           servo-thread
 addf    pid.x.do-pid-calcs          servo-thread
 addf    pid.z.do-pid-calcs          servo-thread
 addf    hm2_[MESA](BOARD).0.write   servo-thread
-addf    classicladder.0.refresh     servo-thread
+
 
 # DPLL TIMER
 setp    hm2_[MESA](BOARD).0.dpll.01.timer-us        -50

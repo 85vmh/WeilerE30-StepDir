@@ -6,22 +6,54 @@ net in.spindle-gear1        TeachInLathe.spindle.is-first-gear
 net in.chuck-cover          TeachInLathe.spindle.cover-opened
 net sp.vel-fb-rpm           TeachInLathe.spindle.actual-rpm
 
-net in.joystick-x-plus      TeachInLathe.joystick.x-plus    =>  classicladder.0.in-11
-net in.joystick-x-minus     TeachInLathe.joystick.x-minus   =>  classicladder.0.in-12
-net in.joystick-z-plus      TeachInLathe.joystick.z-plus    =>  classicladder.0.in-13
-net in.joystick-z-minus     TeachInLathe.joystick.z-minus   =>  classicladder.0.in-14
-
+net in.joystick-x-plus      TeachInLathe.joystick.x-plus   
+net in.joystick-x-minus     TeachInLathe.joystick.x-minus   
+net in.joystick-z-plus      TeachInLathe.joystick.z-plus    
+net in.joystick-z-minus     TeachInLathe.joystick.z-minus 
 net in.joystick-rapid       TeachInLathe.joystick.rapid
-net out.power-feeding       TeachInLathe.app-status.power-feeding  => classicladder.0.in-10
 
+# allow mpg jog only if joystick is neutral
+net in.joystick-neutral         =>  and.mpg-allowed.in0
+
+# decide when we consider we're power feeding 
+net app.power-feeding           <=  TeachInLathe.app-status.power-feeding
+net app.power-feeding           =>  and.power-feeding.in0   # if the app says feeding
+net in.joystick-not-neutral     =>  and.power-feeding.in1   # and if the joystick is non neutral
+net pwr-feed.is-power-feeding   <=  and.power-feeding.out
+
+net MDI-mode                    =>  classicladder.0.in-10
+net app.power-feeding           =>  classicladder.0.in-11
+net in.joystick-neutral         =>  classicladder.0.in-12
+
+# tell classicladder tha the mode is manual
+net nc-mode.is-manual       <=  halui.mode.is-manual
+net nc-mode.is-manual       =>  classicladder.0.in-09
+
+
+# allow mpg jog only after a delay after the feed has stopped
+net pwr-feed.allows-mpg     <=  classicladder.0.out-05
+net pwr-feed.allows-mpg     =>  and.mpg-allowed.in1
+
+
+net pwr-feed.feed-hold      classicladder.0.out-10  => motion.feed-inhibit
+net pwr-feed.set-manual     classicladder.0.out-11  => halui.mode.manual
+
+
+# mpg 
 net mpg.readable-increment  TeachInLathe.handwheels.jog-increment
+# Enable MPG's if they are enabled in the UI
+net mpg.app-x-enable        TeachInLathe.handwheels.x-enable    =>  and.x-mpg-enable.in0
+net mpg.app-z-enable        TeachInLathe.handwheels.z-enable    =>  and.z-mpg-enable.in0
 
-net mpg.x-enable.in0        TeachInLathe.handwheels.x-enable    =>  and.x-mpg-enable.in0
-net mpg.z-enable.in0        TeachInLathe.handwheels.z-enable    =>  and.z-mpg-enable.in0
-net pwr-feed.is-manual      and.x-mpg-enable.in1    and.z-mpg-enable.in1
+# 
+net mpg.jog-allowed         <=  and.mpg-allowed.out
+net mpg.jog-allowed         =>  and.x-mpg-enable.in1
+net mpg.jog-allowed         =>  and.z-mpg-enable.in1
+net mpg.jog-allowed         =>  TeachInLathe.handwheels.allowed
 
-net mpg.x-enable.out        and.x-mpg-enable.out    =>  axis.x.jog-enable
-net mpg.z-enable.out        and.z-mpg-enable.out    =>  axis.z.jog-enable
+
+net mpg.x-enable.out        and.x-mpg-enable.out    =>  axis.x.jog-enable   
+net mpg.z-enable.out        and.z-mpg-enable.out    =>  axis.z.jog-enable   
 
 
 net in.cycle-start          TeachInLathe.button.cycle-start

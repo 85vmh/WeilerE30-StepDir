@@ -13,7 +13,7 @@
 loadrt not      names=not.machine-on,not.sp-on,not.sp-orient,not.index-pulse
 loadrt mult2    names=divider,pulsediv-x,pulsediv-z,mult.sp-pulse,mult.sign
 loadrt mux2     names=mux.gearbox,mux.value-switch,mux.off-delay,mux.sign
-loadrt and2     names=and.on-at-speed,and.should-orient,and.program-run,and.program-step,and.program-pause,and.program-resume,and.x-mpg-enable,and.z-mpg-enable
+loadrt and2     names=and.on-at-speed,and.should-orient,and.program-run,and.program-step,and.program-pause,and.program-resume,and.x-mpg-enable,and.z-mpg-enable,and.mpg-allowed,and.power-feeding
 loadrt or2      names=or.sp-enable,or.pause-resume
 
 addf    not.machine-on          servo-thread
@@ -24,6 +24,8 @@ addf    and.on-at-speed         servo-thread
 addf    and.should-orient       servo-thread
 addf    and.x-mpg-enable        servo-thread
 addf    and.z-mpg-enable        servo-thread
+addf    and.mpg-allowed         servo-thread
+addf    and.power-feeding       servo-thread
 
 addf    and.program-run         servo-thread
 addf    and.program-step        servo-thread
