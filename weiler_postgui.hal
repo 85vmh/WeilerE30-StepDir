@@ -29,6 +29,15 @@ net in.joystick-neutral         =>  classicladder.0.in-12
 net nc-mode.is-manual       <=  halui.mode.is-manual
 net nc-mode.is-manual       =>  classicladder.0.in-09
 
+loadrt comp count=1
+addf comp.0 servo-thread
+
+setp comp.0.in0         0.01    #set the threshold to compare with 0.01mm/sec
+net curr-velocity   <=  motion.current-vel
+net curr-velocity   =>  comp.0.in1
+net is-moving       <= comp.0.out
+net is-moving       => classicladder.0.in-14
+
 
 # allow mpg jog only after a delay after the feed has stopped
 net pwr-feed.allows-mpg     <=  classicladder.0.out-05
@@ -64,3 +73,5 @@ net xmin TeachInLathe.axis-limits.x-min   => ini.x.min_limit
 net xmax TeachInLathe.axis-limits.x-max   => ini.x.max_limit
 net zmin TeachInLathe.axis-limits.z-min   => ini.z.min_limit
 net zmax TeachInLathe.axis-limits.z-max   => ini.z.max_limit
+
+net out.lube-pump       classicladder.0.out-08

@@ -20,12 +20,14 @@ _FILE-sections.csv
 #NAME003=Joystick
 #NAME004=StopProgram
 #NAME005=ChangeMode
+#NAME006=LubePump
 000,0,-1,7,4,0
 001,0,-1,0,2,0
 002,0,-1,5,3,0
 003,0,-1,14,13,0
 004,0,-1,6,6,0
 005,0,-1,10,10,0
+006,0,-1,8,8,0
 _/FILE-sections.csv
 _FILE-rung_11.csv
 #VER=2.0
@@ -70,7 +72,7 @@ _FILE-timers_iec.csv
 1,1,1
 2,2,2
 2,5,0
-2,7,2
+2,50,2
 1,0,0
 1,0,0
 1,0,0
@@ -143,7 +145,7 @@ _FILE-rung_2.csv
 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0
 _/FILE-rung_2.csv
 _FILE-general.txt
-PERIODIC_REFRESH=1
+PERIODIC_REFRESH=2
 SIZE_NBR_RUNGS=100
 SIZE_NBR_BITS=20
 SIZE_NBR_WORDS=20
@@ -156,8 +158,6 @@ SIZE_NBR_PHYS_OUTPUTS=30
 SIZE_NBR_ARITHM_EXPR=100
 SIZE_NBR_SECTIONS=10
 SIZE_NBR_SYMBOLS=200
-SIZE_NBR_PHYS_WORDS_INPUTS=10
-SIZE_NBR_PHYS_WORDS_OUTPUTS=10
 _/FILE-general.txt
 _FILE-ioconf.csv
 #VER=1.0
@@ -169,6 +169,19 @@ _FILE-arithmetic_expressions.csv
 0006,#QW0 = IW2
 0007,#QW1 = IW3
 _/FILE-arithmetic_expressions.csv
+_FILE-rung_8.csv
+#VER=2.0
+#LABEL=
+#COMMENT=
+#PREVRUNG=-1
+#NEXTRUNG=-1
+0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0
+1-0-50/0 , 99-0-0/0 , 13-0-0/13 , 1-0-50/0 , 9-0-0/0 , 9-0-0/0 , 0-0-0/0 , 9-0-0/0 , 9-0-0/0 , 50-0-60/8
+0-0-0/0 , 99-0-0/0 , 99-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0
+0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0
+0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0
+0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0
+_/FILE-rung_8.csv
 _FILE-rung_10.csv
 #VER=2.0
 #LABEL=
@@ -188,18 +201,18 @@ MODBUS_MASTER_SERIAL_SPEED=9600
 MODBUS_MASTER_SERIAL_DATABITS=8
 MODBUS_MASTER_SERIAL_STOPBITS=1
 MODBUS_MASTER_SERIAL_PARITY=0
-MODBUS_ELEMENT_OFFSET=1
+MODBUS_ELEMENT_OFFSET=0
 MODBUS_MASTER_SERIAL_USE_RTS_TO_SEND=0
 MODBUS_MASTER_TIME_INTER_FRAME=100
 MODBUS_MASTER_TIME_OUT_RECEIPT=500
 MODBUS_MASTER_TIME_AFTER_TRANSMIT=0
-MODBUS_DEBUG_LEVEL=3
-MODBUS_MAP_COIL_READ=60
-MODBUS_MAP_COIL_WRITE=60
-MODBUS_MAP_INPUT=50
-MODBUS_MAP_HOLDING=270
-MODBUS_MAP_REGISTER_READ=280
-MODBUS_MAP_REGISTER_WRITE=280
+MODBUS_DEBUG_LEVEL=0
+MODBUS_MAP_COIL_READ=0
+MODBUS_MAP_COIL_WRITE=0
+MODBUS_MAP_INPUT=0
+MODBUS_MAP_HOLDING=0
+MODBUS_MAP_REGISTER_READ=0
+MODBUS_MAP_REGISTER_WRITE=0
 _/FILE-com_params.txt
 _FILE-rung_7.csv
 #VER=2.0
@@ -255,7 +268,7 @@ _FILE-symbols.csv
 %I11,pwrFeed,
 %I12,joyNeutr,
 %I13,interIdle,
-%I14,I14,
+%I14,isMoving,
 %I15,I15,
 %I16,spStarted,
 %I17,isAuto,
@@ -269,7 +282,7 @@ _FILE-symbols.csv
 %Q5,mpgAllow,
 %Q6,prgStop,
 %Q7,ncReady,
-%Q8,Q8,
+%Q8,lubePump,
 %Q9,Q9,
 %Q10,feedInhib,
 %Q11,setManual,
@@ -466,9 +479,9 @@ _FILE-rung_14.csv
 #NEXTRUNG=11
 2-0-50/12 , 1-0-50/11 , 9-0-0/0 , 9-0-0/0 , 9-0-0/0 , 9-0-0/0 , 9-0-0/0 , 9-0-0/0 , 9-0-0/0 , 52-0-0/7
 0-0-50/11 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 9-1-0/0 , 53-0-60/5
-0-0-0/0 , 1-0-50/17 , 1-0-50/13 , 1-0-60/10 , 1-0-0/7 , 9-0-0/0 , 9-0-0/0 , 0-0-0/0 , 9-0-0/0 , 52-0-0/9
-1-0-50/12 , 1-1-50/10 , 2-0-50/13 , 9-0-50/0 , 9-0-0/0 , 9-0-0/0 , 9-0-0/0 , 9-0-0/0 , 9-0-0/0 , 52-0-0/8
-0-0-50/12 , 1-1-50/9 , 2-0-0/7 , 99-0-0/0 , 13-0-0/13 , 9-0-0/0 , 99-0-0/0 , 13-0-0/12 , 9-0-0/0 , 52-0-60/5
+0-0-0/0 , 1-0-50/17 , 1-0-50/13 , 1-0-60/10 , 1-0-0/7 , 9-0-50/0 , 9-0-0/0 , 0-0-0/0 , 9-0-0/0 , 52-0-0/9
+1-0-50/12 , 1-1-50/10 , 2-0-50/13 , 1-0-50/14 , 9-0-0/0 , 9-0-0/0 , 9-0-0/0 , 9-0-0/0 , 9-0-0/0 , 52-0-0/8
+0-0-50/12 , 1-1-50/9 , 2-0-0/7 , 99-0-0/0 , 13-0-0/13 , 2-0-60/5 , 99-0-0/0 , 13-0-0/12 , 9-0-0/0 , 52-0-60/5
 0-0-0/0 , 0-0-0/0 , 0-0-0/0 , 99-0-0/0 , 99-0-0/0 , 0-0-0/0 , 99-0-0/0 , 99-0-0/0 , 0-0-0/0 , 0-0-0/0
 _/FILE-rung_14.csv
 _FILE-counters.csv
