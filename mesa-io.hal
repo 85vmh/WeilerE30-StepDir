@@ -5,7 +5,7 @@
 #------Mesa 7i70 Digital Inputs Card---------
 #TB3 Socket 1
 net in.estop-free           <=  hm2_7i95.0.7i70.0.0.input-00
-net in.drives-enabled       <=  hm2_7i95.0.7i70.0.0.input-01
+net in.enable-drives        <=  hm2_7i95.0.7i70.0.0.input-01
 net in.hard-x-minus         <=  hm2_7i95.0.7i70.0.0.input-02-not
 net in.hard-x-plus          <=  hm2_7i95.0.7i70.0.0.input-03-not
 net in.hard-z-plus          <=  hm2_7i95.0.7i70.0.0.input-04-not

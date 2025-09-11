@@ -159,7 +159,6 @@ net z-is-homed              halui.joint.1.is-homed
 net jog-selected-pos        halui.axis.selected.plus
 net jog-selected-neg        halui.axis.selected.minus
 net machine-is-on           halui.machine.is-on
-net jog-speed               halui.axis.jog-speed
 net MDI-mode                halui.mode.is-mdi
 
 #  ---motion control signals---

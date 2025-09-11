@@ -16,12 +16,17 @@ net in.home-z           =>  joint.1.home-sw-in
 
 # the homing is done by moving the joystick toward X plus to home X axis, 
 # then towards Z+ to home the Z axis. The order is: X first, Z second
-net machine-is-on       =>  classicladder.0.in-00
-net in.joystick-x-plus  =>  classicladder.0.in-01
-net in.joystick-z-plus  =>  classicladder.0.in-02
-net x-is-homed          =>  classicladder.0.in-03
-net z-is-homed          =>  classicladder.0.in-04
+net machine-is-on       =>  classicladder.0.in-02
+net in.joystick-x-minus =>  classicladder.0.in-03
+net in.joystick-x-plus  =>  classicladder.0.in-04
+net in.joystick-z-minus =>  classicladder.0.in-05
+net in.joystick-z-plus  =>  classicladder.0.in-06
+net in.joystick-neutral =>  classicladder.0.in-07
+net in.joystick-rapid   =>  classicladder.0.in-08
 
-net out.home-x          classicladder.0.out-00  =>  halui.joint.0.home
-net out.home-z          classicladder.0.out-01  =>  halui.joint.1.home
-net out.home-inhibit    classicladder.0.out-02  =>  halui.abort
+net x-is-homed          =>  classicladder.0.in-16
+net z-is-homed          =>  classicladder.0.in-17
+
+net out.home-x          classicladder.0.out-03  =>  halui.joint.0.home
+net out.home-z          classicladder.0.out-04  =>  halui.joint.1.home
+net out.home-inhibit    classicladder.0.out-05  =>  halui.abort

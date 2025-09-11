@@ -1,4 +1,10 @@
 # Include your custom HAL commands here
 # This file will not be overwritten when you run PNCconf again
 
-net out.nc-ready  <= classicladder.0.out-07
+# Allow the machine to be powered on
+net out.nc-ready    <=  classicladder.0.out-00
+
+net jog-x-neg       <=  classicladder.0.out-11
+net jog-x-pos       <=  classicladder.0.out-12
+net jog-z-neg       <=  classicladder.0.out-13
+net jog-z-pos       <=  classicladder.0.out-14

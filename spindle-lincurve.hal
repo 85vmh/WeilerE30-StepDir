@@ -3,10 +3,11 @@
 #   With lincurve we can correct that, this is specific for each spindle
 #*******************
 loadrt  lincurve    personality=16 #maximum 16 pairs
-loadrt  abs         names=abs.speed
+loadrt  abs         names=abs.speed,abs.rpm
 
 addf    lincurve.0  servo-thread
 addf    abs.speed   servo-thread
+addf    abs.rpm     servo-thread
 addf    mult.sign   servo-thread    # loadrt performed in common-loadrt-addf.hal
 addf    mux.sign    servo-thread    # loadrt performed in common-loadrt-addf.hal
 

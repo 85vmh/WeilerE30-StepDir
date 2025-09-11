@@ -11,67 +11,85 @@ net in.joystick-x-minus     TeachInLathe.joystick.x-minus
 net in.joystick-z-plus      TeachInLathe.joystick.z-plus    
 net in.joystick-z-minus     TeachInLathe.joystick.z-minus 
 net in.joystick-rapid       TeachInLathe.joystick.rapid
+net app.feed-per-rev        TeachInLathe.joystick.feed-per-rev
+net app.is-angle-feed       TeachInLathe.joystick.is-angle-feed
+net app.jog-speed           TeachInLathe.joystick.jog-speed
+
+
+net app.feed-per-rev        mult.base-feed.in0
+net sp.vel-fb-rpm           abs.rpm.in
+net sp.abs-vel-rpm          abs.rpm.out                 =>  mult.base-feed.in1
+net feed.base-velocity      mult.base-feed.out          =>  mult.actual-feed.in0
+net feed.override-value     halui.feed-override.value   =>  mult.actual-feed.in1
+# net feed.as-jog-speed       mult.actual-feed.out        =>  halui.axis.jog-speed
+
+net speed-sel   mux.jog-speed.sel       classicladder.0.out-15
+net feed-speed  mult.actual-feed.out    mux.jog-speed.in1
+# net jog-speed  
+net movement-speed      mux.jog-speed.out =>  halui.axis.jog-speed
 
 # allow mpg jog only if joystick is neutral
-net in.joystick-neutral         =>  and.mpg-allowed.in0
+# net in.joystick-neutral         =>  and.mpg-allowed.in0
 
-# decide when we consider we're power feeding 
-net app.power-feeding           <=  TeachInLathe.app-status.power-feeding
-net app.power-feeding           =>  and.power-feeding.in0   # if the app says feeding
-net in.joystick-not-neutral     =>  and.power-feeding.in1   # and if the joystick is non neutral
-net pwr-feed.is-power-feeding   <=  and.power-feeding.out
+# # decide when we consider we're power feeding 
+# net app.power-feeding           <=  TeachInLathe.app-status.power-feeding
+# net app.power-feeding           =>  and.power-feeding.in0   # if the app says feeding
+# net in.joystick-not-neutral     =>  and.power-feeding.in1   # and if the joystick is non neutral
+# net pwr-feed.is-power-feeding   <=  and.power-feeding.out
 
-net MDI-mode                    =>  classicladder.0.in-10
-net app.power-feeding           =>  classicladder.0.in-11
-net in.joystick-neutral         =>  classicladder.0.in-12
+# net MDI-mode                    =>  classicladder.0.in-10
+# net app.power-feeding           =>  classicladder.0.in-11
+# net in.joystick-neutral         =>  classicladder.0.in-12
 
-# tell classicladder tha the mode is manual
-net nc-mode.is-manual       <=  halui.mode.is-manual
-net nc-mode.is-manual       =>  classicladder.0.in-09
+# # tell classicladder tha the mode is manual
+# net nc-mode.is-manual       <=  halui.mode.is-manual
+# net nc-mode.is-manual       =>  classicladder.0.in-09
 
-loadrt comp count=1
-addf comp.0 servo-thread
+# loadrt comp count=1
+# addf comp.0 servo-thread
 
-setp comp.0.in0         0.01    #set the threshold to compare with 0.01mm/sec
-net curr-velocity   <=  motion.current-vel
-net curr-velocity   =>  comp.0.in1
-net is-moving       <= comp.0.out
-net is-moving       => classicladder.0.in-14
-
-
-# allow mpg jog only after a delay after the feed has stopped
-net pwr-feed.allows-mpg     <=  classicladder.0.out-05
-net pwr-feed.allows-mpg     =>  and.mpg-allowed.in1
+# setp comp.0.in0         0.01    #set the threshold to compare with 0.01mm/sec
+# net curr-velocity   <=  motion.current-vel
+# net curr-velocity   =>  comp.0.in1
+# net is-moving       <= comp.0.out
+# net is-moving       => classicladder.0.in-14
 
 
-net pwr-feed.feed-hold      classicladder.0.out-10  => motion.feed-inhibit
-net pwr-feed.set-manual     classicladder.0.out-11  => halui.mode.manual
+# # allow mpg jog only after a delay after the feed has stopped
+# net pwr-feed.allows-mpg     <=  classicladder.0.out-05
+# net pwr-feed.allows-mpg     =>  and.mpg-allowed.in1
 
 
-# mpg 
-net mpg.readable-increment  TeachInLathe.handwheels.jog-increment
-# Enable MPG's if they are enabled in the UI
-net mpg.app-x-enable        TeachInLathe.handwheels.x-enable    =>  and.x-mpg-enable.in0
-net mpg.app-z-enable        TeachInLathe.handwheels.z-enable    =>  and.z-mpg-enable.in0
-
-# 
-net mpg.jog-allowed         <=  and.mpg-allowed.out
-net mpg.jog-allowed         =>  and.x-mpg-enable.in1
-net mpg.jog-allowed         =>  and.z-mpg-enable.in1
-net mpg.jog-allowed         =>  TeachInLathe.handwheels.allowed
+# net pwr-feed.feed-hold      classicladder.0.out-10  => motion.feed-inhibit
+# net pwr-feed.set-manual     classicladder.0.out-11  => halui.mode.manual
 
 
-net mpg.x-enable.out        and.x-mpg-enable.out    =>  axis.x.jog-enable   
-net mpg.z-enable.out        and.z-mpg-enable.out    =>  axis.z.jog-enable   
+# # mpg 
+# net mpg.readable-increment  TeachInLathe.handwheels.jog-increment
+# # Enable MPG's if they are enabled in the UI
+# net mpg.app-x-enable        TeachInLathe.handwheels.x-enable    =>  and.x-mpg-enable.in0
+# net mpg.app-z-enable        TeachInLathe.handwheels.z-enable    =>  and.z-mpg-enable.in0
+
+# # 
+# net mpg.jog-allowed         <=  and.mpg-allowed.out
+# net mpg.jog-allowed         =>  and.x-mpg-enable.in1
+# net mpg.jog-allowed         =>  and.z-mpg-enable.in1
+# net mpg.jog-allowed         =>  TeachInLathe.handwheels.allowed
 
 
-net in.cycle-start          TeachInLathe.button.cycle-start
-net in.cycle-abort          TeachInLathe.button.cycle-stop
+# net mpg.x-enable.out        and.x-mpg-enable.out    =>  axis.x.jog-enable   
+# net mpg.z-enable.out        and.z-mpg-enable.out    =>  axis.z.jog-enable   
+
+setp axis.x.jog-enable   1
+setp axis.z.jog-enable      1  
+
+# net in.cycle-start          TeachInLathe.button.cycle-start
+# net in.cycle-abort          TeachInLathe.button.cycle-stop
 
 
-net xmin TeachInLathe.axis-limits.x-min   => ini.x.min_limit
-net xmax TeachInLathe.axis-limits.x-max   => ini.x.max_limit
-net zmin TeachInLathe.axis-limits.z-min   => ini.z.min_limit
-net zmax TeachInLathe.axis-limits.z-max   => ini.z.max_limit
+# net xmin TeachInLathe.axis-limits.x-min   => ini.x.min_limit
+# net xmax TeachInLathe.axis-limits.x-max   => ini.x.max_limit
+# net zmin TeachInLathe.axis-limits.z-min   => ini.z.min_limit
+# net zmax TeachInLathe.axis-limits.z-max   => ini.z.max_limit
 
-net out.lube-pump       classicladder.0.out-08
+# net out.lube-pump       classicladder.0.out-08

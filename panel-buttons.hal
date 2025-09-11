@@ -11,11 +11,11 @@ addf nistToggle.pause-resume  servo-thread
 
 
 #Power & Estop
-net in.estop-free       => iocontrol.0.emc-enable-in
-net in.drives-enabled   => classicladder.0.in-18
-net out.machine-on      classicladder.0.out-18  =>  halui.machine.on
-net out.machine-off     classicladder.0.out-19  =>  halui.machine.off
-net out-program-stop    classicladder.0.out-06  =>  halui.program.stop
+net in.estop-free       => classicladder.0.in-00 iocontrol.0.emc-enable-in
+net in.enable-drives    => classicladder.0.in-01
+net out.machine-on      classicladder.0.out-01  =>  halui.machine.on
+net out.machine-off     classicladder.0.out-02  =>  halui.machine.off
+net out-program-stop    classicladder.0.out-08  =>  halui.program.stop
 
 
 #CycleStart button - handles run/step
@@ -23,7 +23,7 @@ net out-program-stop    classicladder.0.out-06  =>  halui.program.stop
 net in.cycle-start  =>  and.program-run.in0     and.program-step.in0
 net in.cycle-abort  =>  and.program-pause.in0   and.program-resume.in0  classicladder.0.in-19  
 
-net green-btn.idle-on   halui.program.is-idle       => and.program-run.in1  classicladder.0.in-13
+net green-btn.idle-on   halui.program.is-idle       => and.program-run.in1  classicladder.0.in-20
 net green-btn.run-sig   and.program-run.out         => halui.program.run    halui.mode.auto # check if we want auto now  
 net green-btn.step-sig  and.program-step.out        => halui.program.step
 
