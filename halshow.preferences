@@ -5,56 +5,11 @@ placeFrames 0.2950530035335689
 set ::ratio 0.2950530035335689
 set ::old_w_leftf 160
 set ::watchlist {
-    pin+halui.program.is-idle
-    pin+halui.program.is-paused
-    pin+halui.program.is-running
-    pin+halui.mode.is-auto
-    pin+halui.mode.is-joint
-    pin+halui.mode.is-manual
-    pin+halui.mode.is-mdi
-    pin+halui.mode.is-teleop
-    pin+motion.feed-inhibit
-    pin+motion.feed-hold
-    pin+hm2_7i95.0.read.time
-    pin+hm2_7i95.0.write.time
-    pin+hm2_7i95.0.sserial.port-0.fault-count
-    pin+hm2_7i95.0.sserial.port-0.run
-    pin+hm2_7i95.0.sserial.port-0.port_state
-    pin+hm2_7i95.0.sserial.port-0.port_state2
-    pin+hm2_7i95.0.sserial.port-0.port_state3
-    pin+servo-thread.time
-    pin+hm2_7i95.0.ssr.00.out-01
-    pin+TeachInLathe.app-status.is-non-feed-mdi
-    pin+hm2_7i95.0.dpll.base-freq-khz
-    pin+hm2_7i95.0.dpll.ddsize
-    pin+hm2_7i95.0.dpll.phase-error-us
-    pin+hm2_7i95.0.dpll.plimit
-    pin+hm2_7i95.0.dpll.prescale
-    pin+hm2_7i95.0.dpll.01.timer-us
-    pin+hm2_7i95.0.dpll.02.timer-us
-    pin+hm2_7i95.0.dpll.03.timer-us
-    pin+hm2_7i95.0.dpll.04.timer-us
-    pin+hm2_7i95.0.dpll.time-const
-    pin+motion.current-vel
-    sig+is-moving
-    pin+comp.0.in0
-    pin+comp.0.in1
-    pin+comp.0.out
-    sig+out.lube-pump
-    pin+halui.axis.jog-speed
-    pin+halui.axis.x.minus
-    pin+halui.axis.z.plus
-    pin+halui.axis.z.minus
-    sig+jog-z-pos
-    sig+jog-z-neg
-    sig+jog-speed
-    sig+jog-x-neg
-    sig+jog-x-pos
-    pin+spindle.0.revs
-    pin+spindle.0.speed-out
-    pin+spindle.0.speed-out-rps-abs
-    pin+spindle.0.speed-out-rps
-    pin+hm2_7i95.0.encoder.05.velocity-rpm
+    sig+filtered.joystick-neutral
+    sig+filtered.x-minus
+    sig+filtered.x-plus
+    sig+filtered.z-plus
+    sig+filtered.z-minus
 }
 set ::workmode watchhal
 set ::watchInterval 10

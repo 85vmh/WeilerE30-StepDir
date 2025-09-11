@@ -1,19 +1,31 @@
 # These are the the connections made after the UI was launched and custom pins were created
 
+loadrt  debounce    cfg=5
+addf    debounce.0  servo-thread
+setp    debounce.0.delay    20
+
 net in.spindle-rev          TeachInLathe.spindle.switch-rev-in
 net in.spindle-fwd          TeachInLathe.spindle.switch-fwd-in
 net in.spindle-gear1        TeachInLathe.spindle.is-first-gear
 net in.chuck-cover          TeachInLathe.spindle.cover-opened
 net sp.vel-fb-rpm           TeachInLathe.spindle.actual-rpm
 
-net in.joystick-x-plus      TeachInLathe.joystick.x-plus   
-net in.joystick-x-minus     TeachInLathe.joystick.x-minus   
-net in.joystick-z-plus      TeachInLathe.joystick.z-plus    
-net in.joystick-z-minus     TeachInLathe.joystick.z-minus 
+net in.joystick-x-plus      debounce.0.0.in
+net filtered.x-plus         debounce.0.0.out    =>  TeachInLathe.joystick.x-plus   
+net in.joystick-x-minus     debounce.0.1.in
+net filtered.x-minus        debounce.0.1.out    =>  TeachInLathe.joystick.x-minus   
+net in.joystick-z-plus      debounce.0.2.in
+net filtered.z-plus         debounce.0.2.out    =>  TeachInLathe.joystick.z-plus    
+net in.joystick-z-minus     debounce.0.3.in
+net filtered.z-minus        debounce.0.3.out    =>  TeachInLathe.joystick.z-minus 
+
+# no need to filter this one
 net in.joystick-rapid       TeachInLathe.joystick.rapid
 
 # allow mpg jog only if joystick is neutral
-net in.joystick-neutral         =>  and.mpg-allowed.in0
+net in.joystick-neutral         debounce.0.4.in     
+net filtered.joystick-neutral   debounce.0.4.out    not.joystick-neutral.in    and.mpg-allowed.in0
+net in.joystick-not-neutral     not.joystick-neutral.out
 
 # decide when we consider we're power feeding 
 net app.power-feeding           <=  TeachInLathe.app-status.power-feeding
@@ -23,7 +35,7 @@ net pwr-feed.is-power-feeding   <=  and.power-feeding.out
 
 net MDI-mode                    =>  classicladder.0.in-10
 net app.power-feeding           =>  classicladder.0.in-11
-net in.joystick-neutral         =>  classicladder.0.in-12
+net filtered.joystick-neutral   =>  classicladder.0.in-12
 
 # tell classicladder tha the mode is manual
 net nc-mode.is-manual       <=  halui.mode.is-manual
