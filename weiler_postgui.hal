@@ -23,6 +23,8 @@ net feed.base-velocity      mult.base-feed.out          =>  mult.actual-feed.in0
 net feed.override-value     halui.feed-override.value   =>  mult.actual-feed.in1
 # net feed.as-jog-speed       mult.actual-feed.out        =>  halui.axis.jog-speed
 
+setp    mux.jog-speed.in0 2000
+
 net speed-sel   mux.jog-speed.sel       classicladder.0.out-15
 net feed-speed  mult.actual-feed.out    mux.jog-speed.in1
 # net jog-speed  
