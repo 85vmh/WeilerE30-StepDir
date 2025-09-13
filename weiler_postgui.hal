@@ -1,4 +1,7 @@
 # These are the the connections made after the UI was launched and custom pins were created
+loadrt  manual_weiler
+addf    manual-weiler.0     servo-thread
+
 
 net in.spindle-rev          TeachInLathe.spindle.switch-rev-in
 net in.spindle-fwd          TeachInLathe.spindle.switch-fwd-in
@@ -16,19 +19,50 @@ net app.is-angle-feed       TeachInLathe.joystick.is-angle-feed
 net app.jog-speed           TeachInLathe.joystick.jog-speed
 
 
+# hardcoded parameters
+setp                        manual-weiler.0.allowMpgDelay       0.5 # half second
+setp                        manual-weiler.0.startFeedDelay      1   # one second
+setp                        manual-weiler.0.jogRapidSpeed       3000 # for now hardcoded
+
+# input pins
+net sp.is-running       =>  manual-weiler.0.spindleOn # ?? la ce il leg
+net sp.vel-fb-rpm       =>  manual-weiler.0.spindleRpm
+net app.feed-per-rev    =>  manual-weiler.0.feedPerRev
+net mw.override-value   =>  halui.feed-override.value   =>  manual-weiler.0.feedOverride    mult.actual-feed.in1
+
+net in.joystick-neutral     manual-weiler.0.joystickNeutral
+net in.joystick-x-plus      manual-weiler.0.joystickXplus   
+net in.joystick-x-minus     manual-weiler.0.joystickXminus  
+net in.joystick-z-plus      manual-weiler.0.joystickZplus    
+net in.joystick-z-minus     manual-weiler.0.joystickZminus
+net in.joystick-rapid       manual-weiler.0.joystickRapid
+
+# outputs
+net mw.out-jog-speed    =>  manual-weiler.0.jogSpeed    =>  halui.axis.jog-speed
+net jog-x-neg           <=  manual-weiler.0.jogXminus
+net jog-x-pos           <=  manual-weiler.0.jogXplus
+net jog-z-neg           <=  manual-weiler.0.jogZminus
+net jog-z-pos           <=  manual-weiler.0.jogZplus
+
+net mw.out-mpg-enable   =>  manual-weiler.0.allowMpg    =>  axis.x.jog-enable   axis.z.jog-enable
+
+
+# setp axis.x.jog-enable   1
+# setp axis.z.jog-enable   1  
+
 net app.feed-per-rev        mult.base-feed.in0
 net sp.vel-fb-rpm           abs.rpm.in
 net sp.abs-vel-rpm          abs.rpm.out                 =>  mult.base-feed.in1
 net feed.base-velocity      mult.base-feed.out          =>  mult.actual-feed.in0
-net feed.override-value     halui.feed-override.value   =>  mult.actual-feed.in1
-# net feed.as-jog-speed       mult.actual-feed.out        =>  halui.axis.jog-speed
+#net feed.override-value     halui.feed-override.value   =>  mult.actual-feed.in1
+net feed.as-jog-speed       mult.actual-feed.out
 
-setp    mux.jog-speed.in0 2000
+# setp    mux.jog-speed.in0 2000
 
-net speed-sel   mux.jog-speed.sel       classicladder.0.out-15
-net feed-speed  mult.actual-feed.out    mux.jog-speed.in1
-# net jog-speed  
-net movement-speed      mux.jog-speed.out =>  halui.axis.jog-speed
+# net speed-sel   mux.jog-speed.sel       classicladder.0.out-15
+# net feed-speed  mult.actual-feed.out    mux.jog-speed.in1
+# # net jog-speed  
+# net movement-speed      mux.jog-speed.out =>  halui.axis.jog-speed
 
 # allow mpg jog only if joystick is neutral
 # net in.joystick-neutral         =>  and.mpg-allowed.in0
@@ -82,8 +116,7 @@ net movement-speed      mux.jog-speed.out =>  halui.axis.jog-speed
 # net mpg.x-enable.out        and.x-mpg-enable.out    =>  axis.x.jog-enable   
 # net mpg.z-enable.out        and.z-mpg-enable.out    =>  axis.z.jog-enable   
 
-setp axis.x.jog-enable   1
-setp axis.z.jog-enable      1  
+
 
 # net in.cycle-start          TeachInLathe.button.cycle-start
 # net in.cycle-abort          TeachInLathe.button.cycle-stop

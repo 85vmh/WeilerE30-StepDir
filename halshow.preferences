@@ -1,29 +1,36 @@
 # Halshow settings
 # This file is generated automatically.
-wm geometry . 924x846+658+94
-placeFrames 0.37748344370860926
-set ::ratio 0.37748344370860926
-set ::old_w_leftf 160
+wm geometry . 793x648+1116+295
+placeFrames 0.29961587708066584
+set ::ratio 0.29961587708066584
+set ::old_w_leftf 234
 set ::watchlist {
-    sig+sp.vel-fb-rps
-    sig+feed.base-velocity
-    sig+feed.override-value
-    pin+halui.axis.x.minus
-    pin+halui.axis.x.plus
-    pin+halui.axis.z.minus
-    pin+halui.axis.z.plus
-    pin+halui.axis.jog-speed
-    pin+TeachInLathe.joystick.feed-per-rev
-    pin+TeachInLathe.joystick.jog-speed
-    pin+mux.jog-speed.in0
-    pin+mux.jog-speed.in1
-    pin+mux.jog-speed.out
-    pin+mux.jog-speed.sel
-    pin+motion.current-vel
-    pin+motion.jog-inhibit
-    pin+motion.feed-inhibit
+    pin+manual-weiler.0.spindleRpm
+    pin+manual-weiler.0.spindleOn
+    pin+manual-weiler.0.feedPerRev
+    pin+manual-weiler.0.feedOverride
+    pin+manual-weiler.0.jogRapidSpeed
+    pin+manual-weiler.0.joystickNeutral
+    pin+manual-weiler.0.joystickRapid
+    pin+manual-weiler.0.joystickXminus
+    pin+manual-weiler.0.joystickXplus
+    pin+manual-weiler.0.joystickZminus
+    pin+manual-weiler.0.joystickZplus
+    pin+manual-weiler.0.jogSpeed
+    pin+manual-weiler.0.jogXminus
+    pin+manual-weiler.0.jogXplus
+    pin+manual-weiler.0.jogZminus
+    pin+manual-weiler.0.jogZplus
+    pin+manual-weiler.0.resetRequired
+    pin+manual-weiler.0.startFeedDelay
+    pin+manual-weiler.0.allowMpgDelay
+    pin+manual-weiler.0.allowMpg
+    pin+manual-weiler.0.angleFeed
+    sig+feed.as-jog-speed
+    sig+app.feed-per-rev
+    sig+sp.vel-fb-rpm
 }
-set ::workmode showhal
+set ::workmode watchhal
 set ::watchInterval 10
 set ::col1_width 100
 set ::ffmts 
