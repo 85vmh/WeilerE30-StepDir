@@ -9,19 +9,19 @@ pin in  float jogRapidSpeed;    // mm/s
 pin in  float startFeedDelay;   // seconds
 pin in  float allowMpgDelay;    // seconds
 pin in  bit   joystickNeutral;
-pin in  bit   joystickXminus;
-pin in  bit   joystickXplus;
-pin in  bit   joystickZminus;
-pin in  bit   joystickZplus;
+pin in  bit   joystickXMinus;
+pin in  bit   joystickXPlus;
+pin in  bit   joystickZMinus;
+pin in  bit   joystickZPlus;
 pin in  bit   joystickRapid;
 pin in  bit   angleFeed;
 
 /* ===== Outputs ===== */
-pin out bit   jogXminus;
-pin out bit   jogXplus;
-pin out bit   jogZminus;
-pin out bit   jogZplus;
-pin out float jogSpeed;         // mm/s
+pin out bit   jogXMinus;
+pin out bit   jogXPlus;
+pin out bit   jogZMinus;
+pin out bit   jogZPlus;
+pin out float jogSpeed;         // NOTE: FEED outputs mm/min; JOG uses jogRapidSpeed as-is
 pin out bit   allowMpg;
 pin out bit   resetRequired;    // 1 when ST_RESET_REQUIRED
 
@@ -30,7 +30,7 @@ param rw s32 state_dbg;         // 0=NONE, 1=FEEDING_PENDING, 2=FEEDING_ACTIVE, 
 
 function _;
 license "GPLv2";
-author  "vasi";
+author  "vasi mihalca";
 
 ;;
 #include <stdbool.h>
@@ -66,24 +66,26 @@ FUNCTION(_)
 
     /* direction resolver (HW exclusivity guaranteed) */
     int dir = DIR_NEUTRAL;
-    if      (joystickXplus)  dir = DIR_XPLUS;
-    else if (joystickXminus) dir = DIR_XMINUS;
-    else if (joystickZplus)  dir = DIR_ZPLUS;
-    else if (joystickZminus) dir = DIR_ZMINUS;
+    if      (joystickXPlus)  dir = DIR_XPLUS;
+    else if (joystickXMinus) dir = DIR_XMINUS;
+    else if (joystickZPlus)  dir = DIR_ZPLUS;
+    else if (joystickZMinus) dir = DIR_ZMINUS;
 
     /* debug */
     state_dbg = state;
 
-    /* RESET_REQUIRED gate */
+    /* RESET_REQUIRED gate — now allow direct exit to JOGGING if rapid+dir */
     if (state == ST_RESET_REQUIRED) {
         o_resetReq = 1;
-        if (joystickNeutral) {
-            state = ST_NONE;
+        if (joystickRapid && (dir != DIR_NEUTRAL)) {
+            state = ST_JOGGING;            /* allow rapid jog even with spindle off */
+        } else if (joystickNeutral) {
+            state = ST_NONE;               /* classic reset via neutral */
             feed_timer = 0.0;
         }
         /* assign and return */
-        jogXminus = o_xminus; jogXplus  = o_xplus;
-        jogZminus = o_zminus; jogZplus  = o_zplus;
+        jogXMinus = o_xminus; jogXPlus  = o_xplus;
+        jogZMinus = o_zminus; jogZPlus  = o_zplus;
         jogSpeed  = o_speed;  allowMpg  = o_allowMpg;
         resetRequired = o_resetReq;
         return;
@@ -93,15 +95,19 @@ FUNCTION(_)
     switch (state) {
         case ST_NONE:
             if (dir == DIR_NEUTRAL) {
-                /* idle; no feed timer here */
+                /* idle */
             } else {
-                if (!spindleOn) {
-                    state = ST_RESET_REQUIRED;
-                } else {
-                    /* enter FEEDING_PENDING */
+                /* if RAPID held, allow JOGGING regardless of spindleOn */
+                if (joystickRapid) {
+                    state = ST_JOGGING;
+                } else if (spindleOn) {
+                    /* enter FEEDING_PENDING only if spindle is ON */
                     state = ST_FEEDING_PENDING;
                     angleFeed_latched = (angleFeed != 0);
-                    feed_timer = 0.0;   /* seconds */
+                    feed_timer = 0.0;
+                } else {
+                    /* attempted feed with spindle off -> require reset */
+                    state = ST_RESET_REQUIRED;
                 }
             }
             break;
@@ -114,11 +120,11 @@ FUNCTION(_)
                 state = ST_NONE;
                 feed_timer = 0.0;
             } else if (joystickRapid) {
-                /* pulled rapid before delay -> JOGGING */
+                /* pulled rapid before delay -> jogging (allowed) */
                 state = ST_JOGGING;
                 feed_timer = 0.0;
             } else {
-                /* time-delay in seconds (like timedelay) */
+                /* time-delay in seconds */
                 feed_timer += fperiod;
                 if (feed_timer >= startFeedDelay) {
                     state = ST_FEEDING_ACTIVE;
@@ -136,14 +142,14 @@ FUNCTION(_)
                 /* policy: feeding -> jogging when rapid is pulled */
                 state = ST_JOGGING;
             } else {
-                /* mm/s with feed override applied */
-                o_speed = (feedPerRev * fabs(spindleRpm) * feedOverride) / 60.0f;
+                /* FEED speed in mm/min, absolute RPM, with override */
+                o_speed = feedPerRev * fabs(spindleRpm) * feedOverride;
 
                 if (angleFeed_latched) {
                     /* 45° mapping */
                     switch (dir) {
-                        case DIR_XPLUS:   o_xminus = 1; o_zplus  = 1; break;
-                        case DIR_XMINUS:  o_xplus  = 1; o_zminus = 1; break;
+                        case DIR_XMINUS:  o_xminus = 1; o_zplus  = 1; break;
+                        case DIR_XPLUS:   o_xplus  = 1; o_zminus = 1; break;
                         case DIR_ZPLUS:   o_zplus  = 1; o_xplus  = 1; break;
                         case DIR_ZMINUS:  o_zminus = 1; o_xminus = 1; break;
                         default: break;
@@ -164,10 +170,11 @@ FUNCTION(_)
             if (dir == DIR_NEUTRAL) {
                 state = ST_NONE;
             } else if (!joystickRapid) {
+                /* released rapid while still on a direction -> require reset */
                 state = ST_RESET_REQUIRED;
             } else {
+                /* RAPID jog speed (units as provided on jogRapidSpeed) */
                 o_speed = jogRapidSpeed;
-                /* simple jog, no angle feed */
                 switch (dir) {
                     case DIR_XPLUS:   o_xplus  = 1; break;
                     case DIR_XMINUS:  o_xminus = 1; break;
@@ -181,20 +188,20 @@ FUNCTION(_)
 
     /* allow MPG: only when NONE and neutral ON for allowMpgDelay seconds */
     if (state == ST_NONE && joystickNeutral) {
-        mpg_timer += fperiod;           // accumulate SECONDS
+        mpg_timer += fperiod;           // seconds
         if (mpg_timer >= allowMpgDelay) {
             o_allowMpg = 1;
         }
     } else {
-        mpg_timer = 0.0;                // reset when leaving neutral or S0
+        mpg_timer = 0.0;
     }
 
     /* outputs */
     if (state == ST_RESET_REQUIRED) o_resetReq = 1;
     resetRequired = o_resetReq;
 
-    jogXminus = o_xminus; jogXplus  = o_xplus;
-    jogZminus = o_zminus; jogZplus  = o_zplus;
+    jogXMinus = o_xminus; jogXPlus  = o_xplus;
+    jogZMinus = o_zminus; jogZPlus  = o_zplus;
     jogSpeed  = o_speed;  allowMpg  = o_allowMpg;
 
     /* debug pin */
