@@ -1,8 +1,8 @@
 # Halshow settings
 # This file is generated automatically.
-wm geometry . 793x648+1116+295
-placeFrames 0.29961587708066584
-set ::ratio 0.29961587708066584
+wm geometry . 592x648+1294+93
+placeFrames 0
+set ::ratio 0
 set ::old_w_leftf 234
 set ::watchlist {
     pin+manual-weiler.0.spindleRpm
@@ -12,23 +12,18 @@ set ::watchlist {
     pin+manual-weiler.0.jogRapidSpeed
     pin+manual-weiler.0.joystickNeutral
     pin+manual-weiler.0.joystickRapid
-    pin+manual-weiler.0.joystickXminus
-    pin+manual-weiler.0.joystickXplus
-    pin+manual-weiler.0.joystickZminus
-    pin+manual-weiler.0.joystickZplus
     pin+manual-weiler.0.jogSpeed
-    pin+manual-weiler.0.jogXminus
-    pin+manual-weiler.0.jogXplus
-    pin+manual-weiler.0.jogZminus
-    pin+manual-weiler.0.jogZplus
     pin+manual-weiler.0.resetRequired
     pin+manual-weiler.0.startFeedDelay
     pin+manual-weiler.0.allowMpgDelay
     pin+manual-weiler.0.allowMpg
     pin+manual-weiler.0.angleFeed
-    sig+feed.as-jog-speed
     sig+app.feed-per-rev
     sig+sp.vel-fb-rpm
+    pin+manual-weiler.0.jogXMinus
+    pin+manual-weiler.0.jogXPlus
+    pin+manual-weiler.0.jogZMinus
+    pin+manual-weiler.0.jogZPlus
 }
 set ::workmode watchhal
 set ::watchInterval 10
