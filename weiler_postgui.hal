@@ -28,7 +28,7 @@ net app.jog-speed           manual-weiler.0.jogRapidSpeed
 net sp.is-running       =>  manual-weiler.0.spindleOn
 net sp.vel-fb-rpm       =>  manual-weiler.0.spindleRpm
 net app.feed-per-rev    =>  manual-weiler.0.feedPerRev
-net mw.override-value   =>  halui.feed-override.value   =>  manual-weiler.0.feedOverride    mult.actual-feed.in1
+net mw.override-value   =>  halui.feed-override.value   =>  manual-weiler.0.feedOverride
 
 net in.joystick-neutral     manual-weiler.0.joystickNeutral
 net in.joystick-x-plus      manual-weiler.0.joystickXPlus   
