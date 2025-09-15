@@ -27,6 +27,9 @@ set ::watchlist {
     pin+TeachInLathe.joystick.jog-speed
     pin+TeachInLathe.app-status.spindle-started
     pin+TeachInLathe.spindle.cover-opened
+    pin+halui.program.is-idle
+    pin+halui.program.is-paused
+    pin+halui.program.is-running
 }
 set ::workmode watchhal
 set ::watchInterval 10

@@ -16,7 +16,9 @@ net in.enable-drives    => classicladder.0.in-01
 net out.machine-on      classicladder.0.out-01  =>  halui.machine.on
 net out.machine-off     classicladder.0.out-02  =>  halui.machine.off
 net out-program-stop    classicladder.0.out-08  =>  halui.program.stop
-
+net in.manual-mode      halui.mode.is-manual    =>  classicladder.0.in-13
+net out.manual-mode     classicladder.0.out-09  =>  halui.mode.manual
+net in.mdi-mode         halui.mode.is-mdi       =>  classicladder.0.in-14
 
 #CycleStart button - handles run/step
 #CycleStop button - handles pause/resume
