@@ -17,7 +17,6 @@ net in.chuck-cover          <=  hm2_7i95.0.7i70.0.0.input-07-not
 net in.jog-increment-a      <=  hm2_7i95.0.7i70.0.0.input-08
 net in.jog-increment-b      <=  hm2_7i95.0.7i70.0.0.input-09
 net in.joystick-neutral     <=  hm2_7i95.0.7i70.0.0.input-10
-net in.joystick-not-neutral <=  hm2_7i95.0.7i70.0.0.input-10-not
 net in.joystick-x-plus      <=  hm2_7i95.0.7i70.0.0.input-11
 net in.joystick-x-minus     <=  hm2_7i95.0.7i70.0.0.input-12
 net in.joystick-z-plus      <=  hm2_7i95.0.7i70.0.0.input-13
