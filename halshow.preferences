@@ -1,8 +1,8 @@
 # Halshow settings
 # This file is generated automatically.
-wm geometry . 592x648+1294+93
-placeFrames 0
-set ::ratio 0
+wm geometry . 793x648+1090+101
+placeFrames 0.29961587708066584
+set ::ratio 0.29961587708066584
 set ::old_w_leftf 234
 set ::watchlist {
     pin+manual-weiler.0.spindleRpm
@@ -24,6 +24,9 @@ set ::watchlist {
     pin+manual-weiler.0.jogXPlus
     pin+manual-weiler.0.jogZMinus
     pin+manual-weiler.0.jogZPlus
+    pin+TeachInLathe.joystick.jog-speed
+    pin+TeachInLathe.app-status.spindle-started
+    pin+TeachInLathe.spindle.cover-opened
 }
 set ::workmode watchhal
 set ::watchInterval 10
