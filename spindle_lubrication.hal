@@ -1,0 +1,11 @@
+# This file is only for my Weiler E30 who has a custom lubricating pump
+
+loadrt  spindle_lubrication
+addf    spindle-lubrication.0   servo-thread
+
+
+setp    spindle-lubrication.0.onTime    5       #seconds
+setp    spindle-lubrication.0.offTime   1800    # 30 minutes
+
+net machine-is-on   =>  spindle-lubrication.0.machineOn
+net out.lube-pump   <=  spindle-lubrication.0.lubricate

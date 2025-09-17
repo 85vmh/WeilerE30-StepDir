@@ -5,31 +5,6 @@ placeFrames 0.29961587708066584
 set ::ratio 0.29961587708066584
 set ::old_w_leftf 234
 set ::watchlist {
-    pin+manual-weiler.0.spindleRpm
-    pin+manual-weiler.0.spindleOn
-    pin+manual-weiler.0.feedPerRev
-    pin+manual-weiler.0.feedOverride
-    pin+manual-weiler.0.jogRapidSpeed
-    pin+manual-weiler.0.joystickNeutral
-    pin+manual-weiler.0.joystickRapid
-    pin+manual-weiler.0.jogSpeed
-    pin+manual-weiler.0.resetRequired
-    pin+manual-weiler.0.startFeedDelay
-    pin+manual-weiler.0.allowMpgDelay
-    pin+manual-weiler.0.allowMpg
-    pin+manual-weiler.0.angleFeed
-    sig+app.feed-per-rev
-    sig+sp.vel-fb-rpm
-    pin+manual-weiler.0.jogXMinus
-    pin+manual-weiler.0.jogXPlus
-    pin+manual-weiler.0.jogZMinus
-    pin+manual-weiler.0.jogZPlus
-    pin+TeachInLathe.joystick.jog-speed
-    pin+TeachInLathe.app-status.spindle-started
-    pin+TeachInLathe.spindle.cover-opened
-    pin+halui.program.is-idle
-    pin+halui.program.is-paused
-    pin+halui.program.is-running
 }
 set ::workmode watchhal
 set ::watchInterval 10
