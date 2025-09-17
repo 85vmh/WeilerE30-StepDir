@@ -1,0 +1,145 @@
+component spindle_lubrication "Periodic lubrication with force-on and seconds-until-on/off display";
+
+/* ===== Pins ===== */
+pin in  bit   machineOn         "Enable logic when machine is ON";
+pin in  float onTime            "Seconds of lubrication ON time";
+pin in  float offTime           "Seconds of OFF (wait) time";
+pin in  bit   forceOn           "Pulse: start an immediate ON cycle if machine is ON";
+
+pin out bit   lubricate         "Lubrication command";
+pin out s32   secondsTillOn     "Whole seconds remaining to next ON (0 while ON)";
+pin out s32   secondsTillOff    "Whole seconds remaining to end of ON (0 while OFF)";
+
+/* ===== RT function ===== */
+function _;
+license "GPLv2";
+author  "you";
+
+;;
+#include <math.h>
+#include <stdbool.h>
+
+/* Simple 3-state scheduler */
+enum {
+    ST_IDLE = 0,     /* machine off */
+    ST_ON,           /* lubricate asserted for onTime */
+    ST_OFF           /* waiting for offTime to elapse */
+};
+
+/* Persistent state (seconds remaining) */
+static int    st       = ST_IDLE;
+static double on_rem   = 0.0;   /* seconds remaining in ON phase */
+static double off_rem  = 0.0;   /* seconds remaining in OFF phase */
+
+/* Edge detectors for inputs */
+static int last_machineOn = 0;
+static int last_forceOn   = 0;
+
+FUNCTION(_)
+{
+    /* sanitize inputs */
+    const double on_s  = (onTime  > 0.0) ? onTime  : 0.0;
+    const double off_s = (offTime > 0.0) ? offTime : 0.0;
+
+    /* default outputs (C types, not HAL types) */
+    int o_lube    = 0;
+    int o_secsOn  = 0;   /* shows while OFF */
+    int o_secsOff = 0;   /* shows while ON  */
+
+    /* edges */
+    const int machine_on_now = machineOn ? 1 : 0;
+    const int force_rise     = (forceOn && !last_forceOn) ? 1 : 0;
+
+    /* machine OFF resets everything */
+    if (!machine_on_now) {
+        st        = ST_IDLE;
+        on_rem    = 0.0;
+        off_rem   = 0.0;
+        o_lube    = 0;
+        o_secsOn  = 0;
+        o_secsOff = 0;
+        goto _out;
+    }
+
+    /* machine just turned ON? start an ON cycle immediately */
+    if (machine_on_now && !last_machineOn) {
+        st      = ST_ON;
+        on_rem  = on_s;
+        off_rem = 0.0;
+    }
+
+    /* forceOn pulse while machine is ON -> immediate ON cycle */
+    if (force_rise) {
+        st      = ST_ON;
+        on_rem  = on_s;
+        off_rem = 0.0;
+    }
+
+    switch (st) {
+    case ST_ON:
+        o_lube = 1;
+
+        /* countdown ON phase first */
+        on_rem -= fperiod;
+
+        /* secondsTillOff counts while ON; clamp at 0 */
+        o_secsOff = (on_rem > 0.0) ? (int)ceil(on_rem) : 0;
+
+        if (on_rem <= 0.0) {
+            /* transition to OFF */
+            st      = ST_OFF;
+            off_rem = off_s;
+            on_rem  = 0.0;
+            o_lube  = 0;
+            o_secsOff = 0;      /* OFF shows 0 here */
+            /* secondsTillOn handled in ST_OFF below */
+        }
+        /* while ON, secondsTillOn is 0 */
+        o_secsOn = 0;
+        break;
+
+    case ST_OFF:
+        o_lube = 0;
+
+        /* countdown OFF phase first */
+        if (off_rem > 0.0)
+            off_rem -= fperiod;
+
+        /* secondsTillOn shows ceil(remaining) while OFF */
+        o_secsOn  = (off_rem > 0.0) ? (int)ceil(off_rem) : 0;
+        o_secsOff = 0;  /* OFF => no countdown to end-of-ON */
+
+        /* start ON only when OFF actually reached zero */
+        if (off_rem <= 0.0) {
+            st      = ST_ON;
+            on_rem  = on_s;
+            off_rem = 0.0;
+            o_lube  = 1;
+            /* show 0 for secondsTillOn while ON */
+            o_secsOn  = 0;
+            /* secondsTillOff will start counting on next cycle */
+        }
+        break;
+
+    case ST_IDLE:
+    default:
+        /* Should not hit with machine ON; start ON as safe default */
+        st      = ST_ON;
+        on_rem  = on_s;
+        off_rem = 0.0;
+        o_lube  = 1;
+        o_secsOn  = 0;
+        o_secsOff = (on_rem > 0.0) ? (int)ceil(on_rem) : 0;
+        break;
+    }
+
+_out:
+    /* drive HAL outputs */
+    lubricate      = o_lube;
+    secondsTillOn  = o_secsOn;
+    secondsTillOff = o_secsOff;
+
+    /* remember edges */
+    last_machineOn = machine_on_now;
+    last_forceOn   = forceOn ? 1 : 0;
+}
