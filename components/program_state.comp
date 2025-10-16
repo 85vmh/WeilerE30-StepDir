@@ -1,0 +1,174 @@
+component program_state "Program CycleStart/CycleAbort state machine with Single-Block and timed pulses";
+
+/* ===== Inputs ===== */
+pin in  bit   programLoaded           "TRUE when a program is loaded";
+pin in  bit   cycleStart              "Cycle Start / Step / Pause / Resume (edge-triggered)";
+pin in  bit   cycleAbort              "Cycle Abort / Stop (edge-triggered)";
+pin in  bit   singleBlock             "Single-block switch (level)";
+pin in  bit   programIdle             "halui.program.is-idle";
+pin in  bit   programPaused           "halui.program.is-paused";
+pin in  bit   programRunning          "halui.program.is-running";
+
+/* Pulse duration for all outputs: seconds (0.1 = 100ms) */
+pin in  float outputPulseDuration = 0.10 "Seconds for OUT pulses (0.1 = 100ms)";
+
+/* ===== Outputs (connect to halui pins) ===== */
+pin out bit   startProgram            "-> halui.program.run";
+pin out bit   pauseProgram            "-> halui.program.pause";
+pin out bit   resumeProgram           "-> halui.program.resume";
+pin out bit   stepProgram             "-> halui.program.step";
+pin out bit   stopProgram             "-> halui.program.stop";
+pin out bit   unloadProgram           "User-mapped: unload/clear program";
+
+/* ===== Debug ===== */
+param rw s32  state_dbg               "0=NOT_LOADED,1=IDLE,2=RUNNING,3=PAUSED,4=UNKNOWN";
+param rw bit  postStartPausePending_dbg;
+param rw s32  last_action_dbg         "1=start,2=pause,3=resume,4=step,5=stop,6=unload";
+
+/* ===== Function ===== */
+function _;
+license "GPLv2";
+author  "vasi mihalca";
+
+;;
+#include <math.h>
+#include <stdbool.h>
+#include "rtapi.h"
+#include "hal.h"
+
+/* ----- Derived states from feedback ----- */
+enum {
+    ST_NOT_LOADED = 0,
+    ST_IDLE       = 1,
+    ST_RUNNING    = 2,
+    ST_PAUSED     = 3,
+    ST_UNKNOWN    = 4
+};
+
+/* ----- Edge detect memories ----- */
+static bool prev_green = false;
+static bool prev_red   = false;
+
+/* ----- Single-block helper ----- */
+static bool postStartPausePending = false;
+
+/* ----- Pulse timers (seconds) ----- */
+static double t_start  = 0.0;
+static double t_pause  = 0.0;
+static double t_resume = 0.0;
+static double t_step   = 0.0;
+static double t_stop   = 0.0;
+static double t_unload = 0.0;
+
+/* ----- Helper: start a timed pulse on a HAL bit pin ----- */
+static inline void start_pulse(double *tgt, hal_bit_t *pin, float dur)
+{
+    /* clamp duration to [0.01s .. 5s] to avoid mistakes */
+    double d = (double)dur;
+    if (d < 0.01) d = 0.01;
+    if (d > 5.00) d = 5.00;
+    *tgt = d;
+    *pin = 1;
+}
+
+FUNCTION(_)
+{
+    /* === Derive state from feedback === */
+    int st;
+    if (!programLoaded) {
+        st = ST_NOT_LOADED;
+    } else if (programIdle) {
+        st = ST_IDLE;
+    } else if (programRunning) {
+        st = ST_RUNNING;
+    } else if (programPaused) {
+        st = ST_PAUSED;
+    } else {
+        st = ST_UNKNOWN;
+    }
+    state_dbg = st;
+
+    /* === Edge detect === */
+    bool g_now = cycleStart;
+    bool r_now = cycleAbort;
+    bool g_edge = (g_now && !prev_green);
+    bool r_edge = (r_now && !prev_red);
+
+    /* === Consume postStartPausePending: when we actually see RUNNING === */
+    if (postStartPausePending && singleBlock && (st == ST_RUNNING)) {
+        start_pulse(&t_pause, &pauseProgram, outputPulseDuration);
+        last_action_dbg = 2; /* pause */
+        postStartPausePending = false;
+    }
+    /* If SB was turned off before RUNNING, cancel the pending pause */
+    if (!singleBlock && postStartPausePending) {
+        postStartPausePending = false;
+    }
+    postStartPausePending_dbg = postStartPausePending;
+
+    /* === GREEN button behavior === */
+    if (g_edge) {
+        switch (st) {
+            case ST_IDLE:
+                /* Start program */
+                start_pulse(&t_start, &startProgram, outputPulseDuration);
+                last_action_dbg = 1; /* start */
+                /* If SB is ON, arm a one-shot pause to fire when we enter RUNNING */
+                if (singleBlock) {
+                    postStartPausePending = true;
+                }
+                break;
+
+            case ST_RUNNING:
+                /* Pause */
+                start_pulse(&t_pause, &pauseProgram, outputPulseDuration);
+                last_action_dbg = 2; /* pause */
+                break;
+
+            case ST_PAUSED:
+                if (singleBlock) {
+                    /* Single-block -> one step per press */
+                    start_pulse(&t_step, &stepProgram, outputPulseDuration);
+                    last_action_dbg = 4; /* step */
+                } else {
+                    /* Normal -> resume */
+                    start_pulse(&t_resume, &resumeProgram, outputPulseDuration);
+                    last_action_dbg = 3; /* resume */
+                }
+                break;
+
+            default:
+                /* NOT_LOADED / UNKNOWN -> ignore */
+                break;
+        }
+    }
+
+    /* === RED button behavior === */
+    if (r_edge) {
+        if (st == ST_RUNNING || st == ST_PAUSED) {
+            /* Stop (while program active) */
+            start_pulse(&t_stop, &stopProgram, outputPulseDuration);
+            last_action_dbg = 5; /* stop */
+            postStartPausePending = false;
+        } else if (st == ST_IDLE && programLoaded) {
+            /* Unload when idle and a program is loaded */
+            start_pulse(&t_unload, &unloadProgram, outputPulseDuration);
+            last_action_dbg = 6; /* unload */
+        }
+        /* In NOT_LOADED/UNKNOWN -> ignore */
+    }
+
+    /* === Update pulse timers === */
+    double dt = fperiod; /* seconds per servo cycle */
+
+    if (t_start  > 0.0) { t_start  -= dt; if (t_start  <= 0.0) { t_start  = 0.0; startProgram  = 0; } }
+    if (t_pause  > 0.0) { t_pause  -= dt; if (t_pause  <= 0.0) { t_pause  = 0.0; pauseProgram  = 0; } }
+    if (t_resume > 0.0) { t_resume -= dt; if (t_resume <= 0.0) { t_resume = 0.0; resumeProgram = 0; } }
+    if (t_step   > 0.0) { t_step   -= dt; if (t_step   <= 0.0) { t_step   = 0.0; stepProgram   = 0; } }
+    if (t_stop   > 0.0) { t_stop   -= dt; if (t_stop   <= 0.0) { t_stop   = 0.0; stopProgram   = 0; } }
+    if (t_unload > 0.0) { t_unload -= dt; if (t_unload <= 0.0) { t_unload = 0.0; unloadProgram = 0; } }
+
+    /* === Latch edges === */
+    prev_green = g_now;
+    prev_red   = r_now;
+}
