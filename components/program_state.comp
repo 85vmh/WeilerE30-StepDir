@@ -33,6 +33,9 @@ pin out bit   statusProgramPaused;         /* ON in ST_PAUSED_* */
 pin out bit   statusIsSingleBlock;         /* mirror singleBlock input */
 pin out bit   statusStepPaused;            /* ON only in ST_PAUSED_SINGLE_BLOCK AND motionType!=0 */
 
+/* ===== LED (green CycleStart) ===== */
+pin out bit   cycleStartLedStatus;         /* RUNNING=ON; PAUSED=blink 500/500; IDLE&loaded=double-blink; else OFF */
+
 /* ===== Debug ===== */
 param rw s32  state_dbg;                   /* 0=NOT_LOADED,1=IDLE,2=RUNNING,3=PAUSED_NO_SB,4=PAUSED_SB,5=UNKNOWN */
 param rw bit  postStartPausePending_dbg;   /* armed pause after Start in SB */
@@ -58,6 +61,14 @@ enum {
     ST_UNKNOWN                = 5
 };
 
+/* ===== LED modes ===== */
+enum {
+    LED_OFF                   = 0,
+    LED_IDLE_LOADED_DBLINK    = 1,  /* 100ms ON,100ms OFF,100ms ON,700ms OFF */
+    LED_PAUSED_BLINK          = 2,  /* 500ms ON / 500ms OFF */
+    LED_RUNNING_ON            = 3
+};
+
 /* ===== Edge memories & latches ===== */
 static bool prevCycleStartLevel        = false;
 static bool prevCycleAbortLevel        = false;
@@ -74,6 +85,11 @@ static double t_resume  = 0.0;
 static double t_step    = 0.0;
 static double t_stop    = 0.0;
 static double t_unload  = 0.0;
+
+/* ===== LED state ===== */
+static int    led_mode       = LED_OFF;
+static int    led_mode_prev  = LED_OFF;
+static double led_timer      = 0.0;
 
 /* Helper: start a timed pulse on a HAL bit pin */
 static inline void pulse_output_pin(double *timer_ref, hal_bit_t *pin_ref, float duration_sec)
@@ -275,55 +291,88 @@ FUNCTION(_)
         pendingUnloadAfterStop = true;
     }
 
-    /* ===== Update pulse timers ===== */
+    /* ===== LED state machine (CycleStart LED) ===== */
+    /* Choose mode from current state */
+    if (state == ST_PAUSED_NO_SINGLE_BLOCK || state == ST_PAUSED_SINGLE_BLOCK) {
+        led_mode = LED_PAUSED_BLINK;
+    } else if (state == ST_RUNNING) {
+        led_mode = LED_RUNNING_ON;
+    } else if (state == ST_IDLE && programLoaded) {
+        led_mode = LED_IDLE_LOADED_DBLINK;
+    } else {
+        led_mode = LED_OFF;
+    }
+
+    /* Reset LED timer on mode change */
+    if (led_mode != led_mode_prev) {
+        led_timer    = 0.0;
+        led_mode_prev = led_mode;
+    }
+
+    /* Advance timer (base period 1.0s) */
     double dt = fperiod;
 
+    led_timer += dt;
+    if (led_timer >= 1.0) {
+        led_timer -= 1.0;
+        if (led_timer < 0.0) {
+            led_timer = 0.0;
+        }
+    }
+
+    /* Apply LED pattern */
+    switch (led_mode) {
+        case LED_OFF: {
+            cycleStartLedStatus = 0;
+        } break;
+
+        case LED_RUNNING_ON: {
+            cycleStartLedStatus = 1;
+        } break;
+
+        case LED_PAUSED_BLINK: {
+            /* 500ms ON / 500ms OFF */
+            cycleStartLedStatus = (led_timer < 0.5) ? 1 : 0;
+        } break;
+
+        case LED_IDLE_LOADED_DBLINK: {
+            /* 0–0.1 ON, 0.1–0.2 OFF, 0.2–0.3 ON, 0.3–1.0 OFF */
+            if ((led_timer < 0.1) || (led_timer >= 0.2 && led_timer < 0.3)) {
+                cycleStartLedStatus = 1;
+            } else {
+                cycleStartLedStatus = 0;
+            }
+        } break;
+
+        default: {
+            cycleStartLedStatus = 0;
+        } break;
+    }
+
+    /* ===== Update pulse timers ===== */
     if (t_start  > 0.0) {
         t_start -= dt;
-        if (t_start <= 0.0) {
-            t_start      = 0.0;
-            startProgram = 0;
-        }
+        if (t_start <= 0.0) { t_start = 0.0; startProgram = 0; }
     }
-
     if (t_pause  > 0.0) {
         t_pause -= dt;
-        if (t_pause <= 0.0) {
-            t_pause      = 0.0;
-            pauseProgram = 0;
-        }
+        if (t_pause <= 0.0) { t_pause = 0.0; pauseProgram = 0; }
     }
-
     if (t_resume > 0.0) {
         t_resume -= dt;
-        if (t_resume <= 0.0) {
-            t_resume      = 0.0;
-            resumeProgram = 0;
-        }
+        if (t_resume <= 0.0) { t_resume = 0.0; resumeProgram = 0; }
     }
-
     if (t_step   > 0.0) {
         t_step -= dt;
-        if (t_step <= 0.0) {
-            t_step      = 0.0;
-            stepProgram = 0;
-        }
+        if (t_step <= 0.0) { t_step = 0.0; stepProgram = 0; }
     }
-
     if (t_stop   > 0.0) {
         t_stop -= dt;
-        if (t_stop <= 0.0) {
-            t_stop      = 0.0;
-            stopProgram = 0;
-        }
+        if (t_stop <= 0.0) { t_stop = 0.0; stopProgram = 0; }
     }
-
     if (t_unload > 0.0) {
         t_unload -= dt;
-        if (t_unload <= 0.0) {
-            t_unload      = 0.0;
-            unloadProgram = 0;
-        }
+        if (t_unload <= 0.0) { t_unload = 0.0; unloadProgram = 0; }
     }
 
     /* ===== Latch inputs for next cycle ===== */
