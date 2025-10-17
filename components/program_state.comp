@@ -10,7 +10,7 @@ pin in  bit   programPaused           "halui.program.is-paused";
 pin in  bit   programRunning          "halui.program.is-running";
 
 /* Motion velocity to decide 'moving' (mm/s) */
-pin in  float currentVelocity         "Link to motion.current-vel (mm/s)";
+pin in  float currentVelocity                 "Link to motion.current-vel (mm/s)";
 param rw float movingHigh = 0.05      "mm/s: 'moving' becomes TRUE above this";
 param rw float movingLow  = 0.02      "mm/s: 'moving' becomes FALSE below this";
 
@@ -134,8 +134,8 @@ FUNCTION(_)
     statusStepPaused     = (singleBlock && (st == ST_PAUSED));
 
     /* === Moving hysteresis on currentVelocity === */
- moving_flag && currentVelocity > movingoving_flag = true;
-    if ( moving_flag && currentVelocity < movingoving_flag = false;
+    if (!moving_flag && currentVelocity > movingHigh)  moving_flag = true;
+    if ( moving_flag && currentVelocity < movingLow)   moving_flag = false;
     moving_dbg = moving_flag;
 
     /* === Housekeeping: drop feed-hold when not applicable === */
