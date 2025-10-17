@@ -1,44 +1,42 @@
 component program_state "Program CycleStart/Abort SM with Single-Block, feed-hold toggle (motion-type), status pins, LED, and auto-unload after Stop";
 
 /* ===== Inputs ===== */
-pin in  bit   programLoaded           "TRUE when a program is loaded";
-pin in  bit   cycleStart              "Cycle Start / Step / Pause / Resume (edge-triggered)";
-pin in  bit   cycleAbort              "Cycle Abort / Stop (edge-triggered)";
-pin in  bit   singleBlock             "Single-block switch (level)";
-pin in  bit   programIdle             "halui.program.is-idle";
-pin in  bit   programPaused           "halui.program.is-paused";
-pin in  bit   programRunning          "halui.program.is-running";
+pin in  bit   programLoaded;
+pin in  bit   cycleStart;
+pin in  bit   cycleAbort;
+pin in  bit   singleBlock;
+pin in  bit   programIdle;
+pin in  bit   programPaused;
+pin in  bit   programRunning;
 
 /* Motion-type: 0=standstill, nonzero=rapid/feed/arc/etc */
-pin in  s32   motionType              "Link to motion.motion-type";
+pin in  s32   motionType;
 
-/* Pulse duration for all outputs: seconds (0.1 = 100ms) */
-pin in  float outputPulseDuration = 0.10 "Seconds for OUT pulses (0.1 = 100ms)";
+/* Pulse duration (seconds; 0.1 = 100 ms) */
+pin in  float outputPulseDuration = 0.10;
 
-/* ===== Outputs (connect to halui/motion pins) ===== */
-pin out bit   startProgram            "-> halui.program.run";
-pin out bit   pauseProgram            "-> halui.program.pause";
-pin out bit   resumeProgram           "-> halui.program.resume";
-pin out bit   stepProgram             "-> halui.program.step";
-pin out bit   stopProgram             "-> halui.program.stop";
-pin out bit   unloadProgram           "-> your unload handler (ex: halui.program.clear)";
+/* ===== Outputs (halui/motion) ===== */
+pin out bit   startProgram;
+pin out bit   pauseProgram;
+pin out bit   resumeProgram;
+pin out bit   stepProgram;
+pin out bit   stopProgram;
+pin out bit   unloadProgram;
 
-pin out bit   feedHoldCmd             "-> motion.feed-inhibit (0=run, 1=hold)";
+pin out bit   feedHoldCmd;        /* -> motion.feed-inhibit (0=run, 1=hold) */
 
-/* ===== Status Outputs (for UI) ===== */
-pin out bit   statusProgramIdle       "ON while state = IDLE (and programLoaded=1)";
-pin out bit   statusProgramRunning    "ON while state = RUNNING";
-pin out bit   statusProgramPaused     "ON while state = PAUSED";
-pin out bit   statusIsSingleBlock     "Mirror of singleBlock input";
-pin out bit   statusStepPaused        "ON when waiting for STEP: singleBlock=1 && PAUSED";
-
-/* ===== Cycle Start LED ===== */
-pin out bit   cycleStartLedStatus     "Green button LED status (pattern by state)";
+/* ===== Status (UI) ===== */
+pin out bit   statusProgramIdle;
+pin out bit   statusProgramRunning;
+pin out bit   statusProgramPaused;
+pin out bit   statusIsSingleBlock;
+pin out bit   statusStepPaused;
+pin out bit   cycleStartLedStatus;
 
 /* ===== Debug ===== */
-param rw s32  state_dbg               "0=NOT_LOADED,1=IDLE,2=RUNNING,3=PAUSED,4=UNKNOWN";
+param rw s32  state_dbg;              /* 0=NOT_LOADED,1=IDLE,2=RUNNING,3=PAUSED,4=UNKNOWN */
 param rw bit  postStartPausePending_dbg;
-param rw s32  last_action_dbg         "1=start,2=pause,3=resume,4=step,5=stop,6=unload,7=hold_on,8=hold_off";
+param rw s32  last_action_dbg;        /* 1=start,2=pause,3=resume,4=step,5=stop,6=unload,7=hold_on,8=hold_off */
 param rw bit  feedHold_latched_dbg;
 
 /* ===== Function ===== */
@@ -47,242 +45,151 @@ license "GPLv2";
 author  "vasi mihalca";
 
 ;;
-#include <math.h>
 #include <stdbool.h>
 #include "rtapi.h"
 #include "hal.h"
 
-/* ----- External-state decoding ----- */
-enum {
-    ST_NOT_LOADED = 0,
-    ST_IDLE       = 1,
-    ST_RUNNING    = 2,
-    ST_PAUSED     = 3,
-    ST_UNKNOWN    = 4
-};
+/* ----- States ----- */
+enum { ST_NOT_LOADED=0, ST_IDLE=1, ST_RUNNING=2, ST_PAUSED=3, ST_UNKNOWN=4 };
 
-/* ----- LED mode ----- */
-enum {
-    LED_OFF = 0,
-    LED_IDLE_LOADED_DBLINK = 1,  /* 100 ON,100 OFF,100 ON,700 OFF */
-    LED_PAUSED_BLINK = 2,        /* 500 ON / 500 OFF */
-    LED_RUNNING_ON = 3
-};
+/* ----- LED modes ----- */
+enum { LED_OFF=0, LED_IDLE_LOADED_DBLINK=1, LED_PAUSED_BLINK=2, LED_RUNNING_ON=3 };
 
-/* ----- Edge detect memories ----- */
-static bool prev_green = false;
-static bool prev_red   = false;
-static bool prev_singleBlock = false;
-
-/* ----- Helpers / latches ----- */
-static bool postStartPausePending = false;  /* armă pauză după Start în SB=ON, când vedem RUNNING */
-static bool feedHold_latched = false;       /* oglindește ce am pus pe feedHoldCmd */
-static bool pendingUnloadAfterStop = false; /* după Stop, la IDLE pulsez Unload o singură dată */
+/* ----- Edges & latches ----- */
+static bool prev_green=false, prev_red=false, prev_singleBlock=false;
+static bool postStartPausePending=false;
+static bool feedHold_latched=false;
+static bool pendingUnloadAfterStop=false;
 
 /* ----- Pulse timers (seconds) ----- */
-static double t_start  = 0.0;
-static double t_pause  = 0.0;
-static double t_resume = 0.0;
-static double t_step   = 0.0;
-static double t_stop   = 0.0;
-static double t_unload = 0.0;
+static double t_start=0.0, t_pause=0.0, t_resume=0.0, t_step=0.0, t_stop=0.0, t_unload=0.0;
 
-/* ----- LED timers/state ----- */
-static int   led_mode      = LED_OFF;
-static int   led_mode_prev = LED_OFF;
-static double led_timer    = 0.0;
+/* ----- LED state ----- */
+static int led_mode=LED_OFF, led_mode_prev=LED_OFF;
+static double led_timer=0.0;
 
-/* ----- Helper: start a timed pulse on a HAL bit pin ----- */
-static inline void start_pulse(double *tgt, hal_bit_t *pin, float dur)
-{
+/* Helper: timed pulse */
+static inline void start_pulse(double *tgt, hal_bit_t *pin, float dur) {
     double d = (double)dur;
     if (d < 0.01) d = 0.01;
     if (d > 5.00) d = 5.00;
-    *tgt = d;
-    *pin = 1;
+    *tgt = d; *pin = 1;
 }
 
 FUNCTION(_)
 {
-    /* === Derive external state === */
+    /* === Decode external state === */
     int st;
-    if (!programLoaded) {
-        st = ST_NOT_LOADED;
-    } else if (programIdle) {
-        st = ST_IDLE;
-    } else if (programRunning) {
-        st = ST_RUNNING;
-    } else if (programPaused) {
-        st = ST_PAUSED;
-    } else {
-        st = ST_UNKNOWN;
-    }
+    if (!programLoaded)        st = ST_NOT_LOADED;
+    else if (programIdle)      st = ST_IDLE;
+    else if (programRunning)   st = ST_RUNNING;
+    else if (programPaused)    st = ST_PAUSED;
+    else                       st = ST_UNKNOWN;
     state_dbg = st;
 
-    /* --- Status mirrors --- */
+    /* Status pins */
     statusProgramIdle    = (st == ST_IDLE);
     statusProgramRunning = (st == ST_RUNNING);
     statusProgramPaused  = (st == ST_PAUSED);
     statusIsSingleBlock  = singleBlock;
     statusStepPaused     = (singleBlock && (st == ST_PAUSED));
 
-    /* === Housekeeping on feed-hold === */
-    /* Dacă ieșim din SB sau intrăm în stări în care nu are sens, eliberează hold */
+    /* ------- Feed-hold housekeeping ------- */
+    /* 1) La ieșire din SB sau în stări nevalide, eliberează hold */
     if (!singleBlock && feedHold_latched) {
-        feedHoldCmd = 0;
-        feedHold_latched = false;
-        last_action_dbg = 8; /* hold_off */
+        feedHoldCmd = 0; feedHold_latched = false; last_action_dbg = 8;
     }
     if (st == ST_IDLE || st == ST_NOT_LOADED || st == ST_UNKNOWN) {
-        if (feedHold_latched) {
-            feedHoldCmd = 0;
-            feedHold_latched = false;
-            last_action_dbg = 8;
-        }
+        if (feedHold_latched) { feedHoldCmd = 0; feedHold_latched = false; last_action_dbg = 8; }
     }
-    /* Dacă motionType==0 (standstill), asigură-te că hold nu rămâne activ */
-    if (motionType == 0 && feedHold_latched) {
-        feedHoldCmd = 0;
-        feedHold_latched = false;
-        last_action_dbg = 8;
-    }
+    /* IMPORTANT: NU mai eliberăm hold când motionType == 0.
+       Vrei ca feedHoldCmd să PERSISTE până îl schimbi tu manual sau ieși din SB / Stop / Idle. */
 
     feedHold_latched_dbg = feedHold_latched;
 
-    /* === Edge detect === */
-    bool g_now = cycleStart;
-    bool r_now = cycleAbort;
+    /* Edges */
+    bool g_now = cycleStart, r_now = cycleAbort, sb_now = singleBlock;
     bool g_edge = (g_now && !prev_green);
     bool r_edge = (r_now && !prev_red);
-
-    /* === SingleBlock edges === */
-    bool sb_now = singleBlock;
     bool sb_rise = (sb_now && !prev_singleBlock);
     bool sb_fall = (!sb_now && prev_singleBlock);
 
-    /* SB 0->1: dacă rulează, pause automat (intră în PAUSED pentru STEP-uri) */
+    /* SB 0->1: dacă rulează, pauză automată (intră în PAUSED pentru STEP) */
     if (sb_rise) {
-        postStartPausePending = false; /* curăță pending vechi */
-        if (st == ST_RUNNING) {
-            start_pulse(&t_pause, &pauseProgram, outputPulseDuration);
-            last_action_dbg = 2; /* pause */
-        }
-        /* ensure hold off la intrarea în SB */
-        if (feedHold_latched) {
-            feedHoldCmd = 0;
-            feedHold_latched = false;
-            last_action_dbg = 8;
-        }
+        postStartPausePending = false;
+        if (st == ST_RUNNING) { start_pulse(&t_pause, &pauseProgram, outputPulseDuration); last_action_dbg = 2; }
+        /* asigură hold OFF la intrare în SB */
+        if (feedHold_latched) { feedHoldCmd = 0; feedHold_latched = false; last_action_dbg = 8; }
     }
 
     /* SB 1->0: release hold, anulează pending; NU auto-resume */
     if (sb_fall) {
-        if (feedHold_latched) {
-            feedHoldCmd = 0;
-            feedHold_latched = false;
-            last_action_dbg = 8; /* hold_off */
-        }
+        if (feedHold_latched) { feedHoldCmd = 0; feedHold_latched = false; last_action_dbg = 8; }
         postStartPausePending = false;
     }
 
-    /* === postStartPausePending: consumă la intrarea efectivă în RUNNING (după Start) === */
+    /* postStartPausePending: consumă când intrăm efectiv în RUNNING (după Start) */
     if (postStartPausePending && sb_now && (st == ST_RUNNING)) {
-        start_pulse(&t_pause, &pauseProgram, outputPulseDuration);
-        last_action_dbg = 2; /* pause */
+        start_pulse(&t_pause, &pauseProgram, outputPulseDuration); last_action_dbg = 2;
         postStartPausePending = false;
     }
     postStartPausePending_dbg = postStartPausePending;
 
-    /* === GREEN (cycleStart) behavior === */
+    /* GREEN behavior */
     if (g_edge) {
-        /* Regula nouă pentru SB: motionType==0 => STEP, motionType!=0 => toggle hold
-           Regula standard pentru SB=OFF: Idle->Start, Running->Pause, Paused->Resume */
         if (sb_now) {
             if (st == ST_IDLE) {
-                /* Start program (în SB armăm post-pause) */
-                start_pulse(&t_start, &startProgram, outputPulseDuration);
-                last_action_dbg = 1;
+                start_pulse(&t_start, &startProgram, outputPulseDuration); last_action_dbg = 1;
                 postStartPausePending = true;
             } else {
                 if (motionType != 0) {
-                    /* Suntem în mișcare (rapid/feed/arc) -> toggle feed-hold */
+                    /* În mișcare: toggle feed-hold (PERSISTENT) */
                     if (!feedHold_latched) {
-                        feedHoldCmd = 1;          /* HOLD ON */
-                        feedHold_latched = true;
-                        last_action_dbg = 7;
+                        feedHoldCmd = 1; feedHold_latched = true; last_action_dbg = 7;  /* HOLD ON */
                     } else {
-                        feedHoldCmd = 0;          /* HOLD OFF (resume same block) */
-                        feedHold_latched = false;
-                        last_action_dbg = 8;
+                        feedHoldCmd = 0; feedHold_latched = false; last_action_dbg = 8; /* HOLD OFF */
                     }
                 } else {
-                    /* Standstill între blocuri -> dă STEP; asigură hold OFF */
-                    if (feedHold_latched) {
-                        feedHoldCmd = 0;
-                        feedHold_latched = false;
-                        last_action_dbg = 8;
-                    }
-                    start_pulse(&t_step, &stepProgram, outputPulseDuration);
-                    last_action_dbg = 4;
+                    /* Standstill între blocuri: STEP (și ne asigurăm că hold e OFF) */
+                    if (feedHold_latched) { feedHoldCmd = 0; feedHold_latched = false; last_action_dbg = 8; }
+                    start_pulse(&t_step, &stepProgram, outputPulseDuration); last_action_dbg = 4;
                 }
             }
         } else {
-            /* SB OFF: comportament clasic */
+            /* SB OFF: logică standard */
             switch (st) {
-                case ST_IDLE:
-                    start_pulse(&t_start, &startProgram, outputPulseDuration);
-                    last_action_dbg = 1;
-                    break;
-                case ST_RUNNING:
-                    start_pulse(&t_pause, &pauseProgram, outputPulseDuration);
-                    last_action_dbg = 2;
-                    break;
-                case ST_PAUSED:
-                    start_pulse(&t_resume, &resumeProgram, outputPulseDuration);
-                    last_action_dbg = 3;
-                    break;
-                default:
-                    break;
+                case ST_IDLE:    start_pulse(&t_start,  &startProgram,  outputPulseDuration); last_action_dbg = 1; break;
+                case ST_RUNNING: start_pulse(&t_pause,  &pauseProgram,  outputPulseDuration); last_action_dbg = 2; break;
+                case ST_PAUSED:  start_pulse(&t_resume, &resumeProgram, outputPulseDuration); last_action_dbg = 3; break;
+                default: break;
             }
         }
     }
 
-    /* === RED (cycleAbort) behavior === */
+    /* RED behavior */
     if (r_edge) {
         if (st == ST_RUNNING || st == ST_PAUSED) {
-            /* Stop acum, apoi când vedem IDLE -> Unload automat */
-            start_pulse(&t_stop, &stopProgram, outputPulseDuration);
-            last_action_dbg = 5;
+            start_pulse(&t_stop, &stopProgram, outputPulseDuration); last_action_dbg = 5;
             postStartPausePending = false;
-            /* drop hold if any */
-            if (feedHold_latched) {
-                feedHoldCmd = 0;
-                feedHold_latched = false;
-                last_action_dbg = 8;
-            }
-            pendingUnloadAfterStop = true;
+            if (feedHold_latched) { feedHoldCmd = 0; feedHold_latched = false; last_action_dbg = 8; }
+            pendingUnloadAfterStop = true;   /* => când devine IDLE, pulsez Unload */
         } else if (st == ST_IDLE && programLoaded) {
-            /* Idle + loaded: Unload direct */
-            start_pulse(&t_unload, &unloadProgram, outputPulseDuration);
-            last_action_dbg = 6;
+            start_pulse(&t_unload, &unloadProgram, outputPulseDuration); last_action_dbg = 6;
             pendingUnloadAfterStop = false;
         }
     }
 
-    /* === Auto-unload după Stop: când devine IDLE === */
+    /* Auto-unload după Stop: când devine IDLE */
     if (pendingUnloadAfterStop && (st == ST_IDLE) && programLoaded) {
-        start_pulse(&t_unload, &unloadProgram, outputPulseDuration);
-        last_action_dbg = 6;
+        start_pulse(&t_unload, &unloadProgram, outputPulseDuration); last_action_dbg = 6;
         pendingUnloadAfterStop = false;
     }
-    /* Dacă între timp s-a descărcat programul sau am ieșit din flux, curățăm flag-ul */
     if (pendingUnloadAfterStop && (!programLoaded)) {
         pendingUnloadAfterStop = false;
     }
 
-    /* === Update pulse timers === */
-    double dt = fperiod; /* seconds per servo cycle */
-
+    /* Timere pulsuri */
+    double dt = fperiod;
     if (t_start  > 0.0) { t_start  -= dt; if (t_start  <= 0.0) { t_start  = 0.0; startProgram  = 0; } }
     if (t_pause  > 0.0) { t_pause  -= dt; if (t_pause  <= 0.0) { t_pause  = 0.0; pauseProgram  = 0; } }
     if (t_resume > 0.0) { t_resume -= dt; if (t_resume <= 0.0) { t_resume = 0.0; resumeProgram = 0; } }
@@ -290,57 +197,25 @@ FUNCTION(_)
     if (t_stop   > 0.0) { t_stop   -= dt; if (t_stop   <= 0.0) { t_stop   = 0.0; stopProgram   = 0; } }
     if (t_unload > 0.0) { t_unload -= dt; if (t_unload <= 0.0) { t_unload = 0.0; unloadProgram = 0; } }
 
-    /* === Cycle Start LED state machine === */
-    /* Alege pattern după stare */
-    if (st == ST_PAUSED) {
-        led_mode = LED_PAUSED_BLINK;
-    } else if (st == ST_RUNNING) {
-        led_mode = LED_RUNNING_ON;
-    } else if (st == ST_IDLE && programLoaded) {
-        led_mode = LED_IDLE_LOADED_DBLINK;
-    } else {
-        led_mode = LED_OFF;
-    }
+    /* LED pattern by state */
+    if (st == ST_PAUSED)                    led_mode = LED_PAUSED_BLINK;
+    else if (st == ST_RUNNING)              led_mode = LED_RUNNING_ON;
+    else if (st == ST_IDLE && programLoaded)led_mode = LED_IDLE_LOADED_DBLINK;
+    else                                    led_mode = LED_OFF;
 
-    /* Reset LED timer pe schimbare mod */
-    if (led_mode != led_mode_prev) {
-        led_timer = 0.0;
-        led_mode_prev = led_mode;
-    }
+    if (led_mode != led_mode_prev) { led_timer = 0.0; led_mode_prev = led_mode; }
 
-    /* Timp de bază 1.0 s pentru pattern-uri */
-    led_timer += dt;
-    if (led_timer >= 1.0) {
-        led_timer -= 1.0;
-        if (led_timer < 0.0) led_timer = 0.0;
-    }
+    led_timer += dt; if (led_timer >= 1.0) { led_timer -= 1.0; if (led_timer < 0.0) led_timer = 0.0; }
 
-    /* Aplică pattern */
     switch (led_mode) {
-        case LED_OFF:
-            cycleStartLedStatus = 0;
-            break;
-        case LED_RUNNING_ON:
-            cycleStartLedStatus = 1;
-            break;
-        case LED_PAUSED_BLINK:
-            /* 500ms ON / 500ms OFF */
-            cycleStartLedStatus = (led_timer < 0.5) ? 1 : 0;
-            break;
-        case LED_IDLE_LOADED_DBLINK:
-            /* 0-0.1 ON, 0.1-0.2 OFF, 0.2-0.3 ON, 0.3-1.0 OFF */
-            if ((led_timer < 0.1) || (led_timer >= 0.2 && led_timer < 0.3)) {
-                cycleStartLedStatus = 1;
-            } else {
-                cycleStartLedStatus = 0;
-            }
-            break;
-        default:
-            cycleStartLedStatus = 0;
-            break;
+        case LED_OFF:                   cycleStartLedStatus = 0; break;
+        case LED_RUNNING_ON:           cycleStartLedStatus = 1; break;
+        case LED_PAUSED_BLINK:         cycleStartLedStatus = (led_timer < 0.5) ? 1 : 0; break;
+        case LED_IDLE_LOADED_DBLINK:   cycleStartLedStatus = ((led_timer < 0.1) || (led_timer >= 0.2 && led_timer < 0.3)) ? 1 : 0; break;
+        default:                       cycleStartLedStatus = 0; break;
     }
 
-    /* === Latch edges === */
+    /* Latch inputs */
     prev_green       = g_now;
     prev_red         = r_now;
     prev_singleBlock = sb_now;
