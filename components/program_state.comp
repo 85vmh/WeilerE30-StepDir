@@ -31,7 +31,7 @@ pin out bit   statusProgramIdle;           /* ON in ST_IDLE */
 pin out bit   statusProgramRunning;        /* ON in ST_RUNNING */
 pin out bit   statusProgramPaused;         /* ON in ST_PAUSED_* */
 pin out bit   statusIsSingleBlock;         /* mirror singleBlock input */
-pin out bit   statusStepPaused;            /* ON only in ST_PAUSED_SINGLE_BLOCK AND motionType!=0 */
+pin out bit   statusStepPaused;            /* true in ST_PAUSED_SINGLE_BLOCK iff motionType!=0 */
 
 /* ===== LED (green CycleStart) ===== */
 pin out bit   cycleStartLedStatus;         /* RUNNING=ON; PAUSED=blink 500/500; IDLE&loaded=double-blink; else OFF */
@@ -77,6 +77,9 @@ static bool prevSingleBlockLevel       = false;
 static bool postStartPausePending      = false;   /* after Start with SB=ON, pause when RUNNING appears */
 static bool feedHoldLatched            = false;   /* mirror of the feedHoldCmd we drive */
 static bool pendingUnloadAfterStop     = false;   /* after Stop: when we see IDLE, pulse Unload once */
+static bool firstStepAfterEnterSB      = false;   /* first GREEN in ST_PAUSED_SINGLE_BLOCK must STEP */
+
+static int  prevState                  = ST_UNKNOWN;
 
 /* ===== Pulse timers (seconds) ===== */
 static double t_start   = 0.0;
@@ -124,14 +127,27 @@ FUNCTION(_)
 
     state_dbg = state;
 
+    /* Arm „first step” când INTRĂM în ST_PAUSED_SINGLE_BLOCK */
+    if ((state == ST_PAUSED_SINGLE_BLOCK) && (prevState != ST_PAUSED_SINGLE_BLOCK)) {
+        firstStepAfterEnterSB = true;
+    }
+    /* Dacă ieșim din starea SB-paused, resetăm armarea (nu o cărăm în alte stări) */
+    if (state != ST_PAUSED_SINGLE_BLOCK) {
+        firstStepAfterEnterSB = false;
+    }
+
     /* ===== Status pins ===== */
     statusProgramIdle       = (state == ST_IDLE);
     statusProgramRunning    = (state == ST_RUNNING);
     statusProgramPaused     = (state == ST_PAUSED_NO_SINGLE_BLOCK) || (state == ST_PAUSED_SINGLE_BLOCK);
     statusIsSingleBlock     = singleBlock;
 
-    /* „Step-paused”: SB și pauză în cadrul unei mișcări (feed-hold) */
-    statusStepPaused        = (state == ST_PAUSED_SINGLE_BLOCK) && (motionType != 0);
+    /* statusStepPaused: setat din interiorul stării SB-paused; default false */
+    statusStepPaused        = false;
+    if (state == ST_PAUSED_SINGLE_BLOCK) {
+        /* „pauză în cadrul unui pas” = motionType != 0 (când togglim feed-hold) */
+        statusStepPaused    = (motionType != 0);
+    }
 
     /* ===== Edge detection (rising edges) ===== */
     bool cycleStartLevel    = cycleStart;
@@ -241,7 +257,20 @@ FUNCTION(_)
             } break;
 
             case ST_PAUSED_SINGLE_BLOCK: {
-                /* SB mode:
+                /* Prima apăsare după intrarea în SB-paused: forțează STEP, indiferent de motion */
+                if (firstStepAfterEnterSB) {
+                    if (feedHoldLatched) {
+                        feedHoldCmd     = 0;
+                        feedHoldLatched = false;
+                        last_action_dbg = 8;
+                    }
+                    pulse_output_pin(&t_step, &stepProgram, outputPulseDuration);
+                    last_action_dbg        = 4;
+                    firstStepAfterEnterSB  = false;
+                    break;
+                }
+
+                /* După prima apăsare: logica standard SB
                    - motionType == 0  : STEP next block (ensure hold off)
                    - motionType != 0  : toggle feed-hold (persistent) */
                 if (motionType != 0) {
@@ -289,6 +318,9 @@ FUNCTION(_)
 
         /* arm auto-unload: when we see IDLE, emit unload once */
         pendingUnloadAfterStop = true;
+
+        /* dacă plecăm cu Stop din SB-paused, nu păstrăm „first step” armat */
+        firstStepAfterEnterSB = false;
     }
 
     /* ===== LED state machine (CycleStart LED) ===== */
@@ -305,7 +337,7 @@ FUNCTION(_)
 
     /* Reset LED timer on mode change */
     if (led_mode != led_mode_prev) {
-        led_timer    = 0.0;
+        led_timer     = 0.0;
         led_mode_prev = led_mode;
     }
 
@@ -375,8 +407,9 @@ FUNCTION(_)
         if (t_unload <= 0.0) { t_unload = 0.0; unloadProgram = 0; }
     }
 
-    /* ===== Latch inputs for next cycle ===== */
+    /* ===== Latch inputs & state for next cycle ===== */
     prevCycleStartLevel  = cycleStartLevel;
     prevCycleAbortLevel  = cycleAbortLevel;
     prevSingleBlockLevel = singleBlockLevel;
+    prevState            = state;
 }
