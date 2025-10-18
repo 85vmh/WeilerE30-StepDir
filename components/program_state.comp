@@ -96,7 +96,7 @@ static bool prevSingleBlockLevel       = false;
 static bool prevChuckCoverLevel        = false;
 
 static bool postStartPausePending      = false;   /* after Start with SB=ON, pause when RUNNING appears */
-static bool feedInhibitLatched            = false;   /* mirror of the feedInhibit we drive */
+static bool feedHoldLatched            = false;   /* mirror of the feedInhibit we drive */
 static bool pendingUnloadAfterStop     = false;   /* after Stop: when we see IDLE, pulse Unload once */
 static bool firstStepAfterEnterSB      = false;   /* first GREEN in ST_PAUSED_SINGLE_BLOCK must STEP */
 
@@ -177,7 +177,7 @@ FUNCTION(_)
         overlayState         = OV_CHUCK_COVER_OPENED;
         /* Force safety actions */
         feedInhibit          = 1;
-        feedInhibitLatched      = true;
+        feedHoldLatched      = true;
         spindleInhibit       = 1;
         spindleUninhibitCommanded = false;
     }
@@ -214,17 +214,17 @@ FUNCTION(_)
     if (singleBlockRise && (state == ST_RUNNING) && (overlayState == OV_NONE)) {
         pulse_output_pin(&t_pause, &pauseProgram, outputPulseDuration);
         last_action_dbg = 2;
-        if (feedInhibitLatched) {
+        if (feedHoldLatched) {
             feedInhibit     = 0;
-            feedInhibitLatched = false;
+            feedHoldLatched = false;
             last_action_dbg = 8;
         }
     }
 
     if (singleBlockFall) {
-        if (feedInhibitLatched) {
+        if (feedHoldLatched) {
             feedInhibit     = 0;
-            feedInhibitLatched = false;
+            feedHoldLatched = false;
             last_action_dbg = 8;
         }
         postStartPausePending = false;
@@ -264,26 +264,26 @@ FUNCTION(_)
             /* Respect Single-Block */
             if (!singleBlockLevel) {
                 /* Normal: resume feed */
-                if (feedInhibitLatched) {
+                if (feedHoldLatched) {
                     feedInhibit     = 0;
-                    feedInhibitLatched = false;
+                    feedHoldLatched = false;
                     last_action_dbg = 8;
                 }
                 overlayState = OV_NONE;  /* back to base; base should be Running naturally */
             } else {
                 /* SB ON: motionType != 0 -> release hold; motionType == 0 -> STEP */
                 if (motionType != 0) {
-                    if (feedInhibitLatched) {
+                    if (feedHoldLatched) {
                         feedInhibit     = 0;
-                        feedInhibitLatched = false;
+                        feedHoldLatched = false;
                         last_action_dbg = 8;
                     }
                     /* stay in overlay until motion resolves into base state; then overlay ends */
                     overlayState = OV_NONE;
                 } else {
-                    if (feedInhibitLatched) {
+                    if (feedHoldLatched) {
                         feedInhibit     = 0;
-                        feedInhibitLatched = false;
+                        feedHoldLatched = false;
                         last_action_dbg = 8;
                     }
                     pulse_output_pin(&t_step, &stepProgram, outputPulseDuration);
@@ -310,10 +310,10 @@ FUNCTION(_)
                         last_action_dbg = 2;
                     } else {
                         if (motionType != 0) {
-                            if (!feedInhibitLatched) { feedInhibit = 1; feedInhibitLatched = true; last_action_dbg = 7; }
-                            else                  { feedInhibit = 0; feedInhibitLatched = false; last_action_dbg = 8; }
+                            if (!feedHoldLatched) { feedInhibit = 1; feedHoldLatched = true; last_action_dbg = 7; }
+                            else                  { feedInhibit = 0; feedHoldLatched = false; last_action_dbg = 8; }
                         } else {
-                            if (feedInhibitLatched) { feedInhibit = 0; feedInhibitLatched = false; last_action_dbg = 8; }
+                            if (feedHoldLatched) { feedInhibit = 0; feedHoldLatched = false; last_action_dbg = 8; }
                             pulse_output_pin(&t_step, &stepProgram, outputPulseDuration);
                             last_action_dbg = 4;
                         }
@@ -327,17 +327,17 @@ FUNCTION(_)
 
                 case ST_PAUSED_SINGLE_BLOCK: {
                     if (firstStepAfterEnterSB) {
-                        if (feedInhibitLatched) { feedInhibit = 0; feedInhibitLatched = false; last_action_dbg = 8; }
+                        if (feedHoldLatched) { feedInhibit = 0; feedHoldLatched = false; last_action_dbg = 8; }
                         pulse_output_pin(&t_step, &stepProgram, outputPulseDuration);
                         last_action_dbg = 4;
                         firstStepAfterEnterSB = false;
                         break;
                     }
                     if (motionType != 0) {
-                        if (!feedInhibitLatched) { feedInhibit = 1; feedInhibitLatched = true; last_action_dbg = 7; }
-                        else                  { feedInhibit = 0; feedInhibitLatched = false; last_action_dbg = 8; }
+                        if (!feedHoldLatched) { feedInhibit = 1; feedHoldLatched = true; last_action_dbg = 7; }
+                        else                  { feedInhibit = 0; feedHoldLatched = false; last_action_dbg = 8; }
                     } else {
-                        if (feedInhibitLatched) { feedInhibit = 0; feedInhibitLatched = false; last_action_dbg = 8; }
+                        if (feedHoldLatched) { feedInhibit = 0; feedHoldLatched = false; last_action_dbg = 8; }
                         pulse_output_pin(&t_step, &stepProgram, outputPulseDuration);
                         last_action_dbg = 4;
                     }
@@ -359,9 +359,9 @@ FUNCTION(_)
 
         postStartPausePending = false;
 
-        if (feedInhibitLatched) {
+        if (feedHoldLatched) {
             feedInhibit     = 0;
-            feedInhibitLatched = false;
+            feedHoldLatched = false;
             last_action_dbg = 8;
         }
 
@@ -385,7 +385,7 @@ FUNCTION(_)
             spindleUninhibitCommanded = false;
             /* ensure safety levels */
             feedInhibit     = 1;
-            feedInhibitLatched = true;
+            feedHoldLatched = true;
             spindleInhibit  = 1;
         } else {
             /* If we already allowed spindle and speed is reached, move on */
@@ -400,7 +400,7 @@ FUNCTION(_)
             overlayState = OV_CHUCK_COVER_OPENED;
             /* safety */
             feedInhibit     = 1;
-            feedInhibitLatched = true;
+            feedHoldLatched = true;
             spindleInhibit  = 1;
         }
     }
