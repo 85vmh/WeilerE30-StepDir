@@ -172,25 +172,37 @@ FUNCTION(_)
 
     /* ===== Overlay: enter/exit logic for chuck cover ===== */
     if (chuckCoverRise) {
-        /* Enter safety overlay */
-        prevStateBeforeCover = state;           /* remember base state at opening */
-        overlayState         = OV_CHUCK_COVER_OPENED;
-        /* Force safety actions */
-        feedInhibit          = 1;
-        feedHoldLatched      = true;
-        spindleInhibit       = 1;
-        spindleUninhibitCommanded = false;
+        /* remember base state at opening */
+        prevStateBeforeCover = state;
+
+        if (state == ST_RUNNING) {
+            /* Engage safety ONLY if we were running */
+            overlayState               = OV_CHUCK_COVER_OPENED;
+
+            feedInhibit                = 1;
+            feedHoldLatched            = true;
+
+            spindleInhibit             = 1;
+            spindleUninhibitCommanded  = false;
+
+            last_action_dbg            = 7; /* hold_on, informational */
+        } else {
+            /* Not running -> ignore cover open for inhibits/overlay */
+            overlayState               = OV_NONE;
+            /* Do NOT touch feedInhibit / spindleInhibit here */
+        }
     }
 
     if (chuckCoverFall && (overlayState == OV_CHUCK_COVER_OPENED)) {
-        /* Only start resume sequence if we WERE in RUNNING before cover opened */
         if (prevStateBeforeCover == ST_RUNNING) {
-            overlayState = OV_SPINDLE_RESUME_REQ;
+            overlayState              = OV_SPINDLE_RESUME_REQ;
+            spindleUninhibitCommanded = false;
         } else {
-            overlayState = OV_NONE;            /* no resume flow needed */
+            /* If we didn’t engage because we weren’t running, nothing to resume */
+            overlayState              = OV_NONE;
         }
-        spindleUninhibitCommanded = false;
     }
+
 
     /* ===== Status pins (base + overlay) ===== */
     statusProgramIdle       = (state == ST_IDLE);
