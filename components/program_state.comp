@@ -1,4 +1,4 @@
-component program_state "Readable program state machine: Running / Paused (SB/NoSB) with motion-type based STEP vs feed-hold toggle";
+component program_state "Readable program state machine: Running / Paused (SB/NoSB) with motion-type based STEP vs feed-hold toggle + Chuck cover safety overlay";
 
 /* ===== Inputs ===== */
 pin in  bit   programLoaded;        /* TRUE when a program is loaded */
@@ -12,6 +12,10 @@ pin in  bit   programRunning;       /* halui.program.is-running */
 /* motion.motion-type: 0 = standstill ; nonzero = moving (rapid/feed/arc/...) */
 pin in  s32   motionType;
 
+/* Safety overlay inputs */
+pin in  bit   chuckCoverOpened;     /* 1 = cover open */
+pin in  bit   spindleAtSpeed;       /* 1 = spindle at commanded speed */
+
 /* Pulse duration (seconds; 0.1 = 100ms) for all command pulses */
 pin in  float outputPulseDuration = 0.10;
 
@@ -23,23 +27,30 @@ pin out bit   stepProgram;          /* -> halui.program.step   (pulse) */
 pin out bit   stopProgram;          /* -> halui.program.stop   (pulse) */
 pin out bit   unloadProgram;        /* spare (not used here) */
 
-/* Feed-hold command (level, persistent) */
-pin out bit   feedHoldCmd;          /* -> motion.feed-inhibit (0=run, 1=hold) */
+/* Feed-hold + Spindle inhibit (levels) */
+pin out bit   feedInhibit;          /* -> motion.feed-inhibit (0=run, 1=hold) */
+pin out bit   spindleInhibit;       /* user-mapped: inhibit spindle (1=block, 0=allow) */
 
 /* ===== Status pins (stay ON while in that state) ===== */
-pin out bit   statusProgramIdle;           /* ON in ST_IDLE */
-pin out bit   statusProgramRunning;        /* ON in ST_RUNNING */
-pin out bit   statusProgramPaused;         /* ON in ST_PAUSED_* */
-pin out bit   statusIsSingleBlock;         /* mirror singleBlock input */
-pin out bit   statusStepPaused;            /* true in ST_PAUSED_SINGLE_BLOCK iff motionType!=0 */
+pin out bit   statusProgramIdle;            /* ON in ST_IDLE */
+pin out bit   statusProgramRunning;         /* ON in ST_RUNNING */
+pin out bit   statusProgramPaused;          /* ON in ST_PAUSED_* */
+pin out bit   statusIsSingleBlock;          /* mirror singleBlock input */
+pin out bit   statusStepPaused;             /* true in ST_PAUSED_SINGLE_BLOCK iff motionType!=0 */
+
+/* New status pins for overlay states */
+pin out bit   statusChuckCoverOpened;       /* ON in ST_CHUCK_COVER_OPENED */
+pin out bit   statusSpindleResumeRequired;  /* ON in ST_SPINDLE_RESUME_REQUIRED */
+pin out bit   statusFeedResumeRequired;     /* ON in ST_FEED_RESUME_REQUIRED */
 
 /* ===== LED (green CycleStart) ===== */
-pin out bit   cycleStartLedStatus;         /* RUNNING=ON; PAUSED=blink 500/500; IDLE&loaded=double-blink; else OFF */
+pin out bit   cycleStartLedStatus;          /* RUNNING=ON; PAUSED=blink 500/500; IDLE&loaded=double-blink; other per overlay */
 
 /* ===== Debug ===== */
-param rw s32  state_dbg;                   /* 0=NOT_LOADED,1=IDLE,2=RUNNING,3=PAUSED_NO_SB,4=PAUSED_SB,5=UNKNOWN */
-param rw bit  postStartPausePending_dbg;   /* armed pause after Start in SB */
-param rw s32  last_action_dbg;             /* 1=start,2=pause,3=resume,4=step,5=stop,7=hold_on,8=hold_off */
+param rw s32  state_dbg;                    /* base state: 0=NOT_LOADED,1=IDLE,2=RUNNING,3=PAUSED_NO_SB,4=PAUSED_SB,5=UNKNOWN */
+param rw bit  postStartPausePending_dbg;    /* armed pause after Start in SB */
+param rw s32  last_action_dbg;              /* 1=start,2=pause,3=resume,4=step,5=stop,7=hold_on,8=hold_off */
+param rw s32  overlay_dbg;                  /* 0=NONE, 1=COVER_OPEN, 2=SPINDLE_RESUME_REQ, 3=FEED_RESUME_REQ */
 
 /* ===== Function ===== */
 function _;
@@ -51,7 +62,7 @@ author  "vasi mihalca";
 #include "rtapi.h"
 #include "hal.h"
 
-/* ===== Internal states (explicit, verbose names) ===== */
+/* ===== Base states (explicit, verbose names) ===== */
 enum {
     ST_NOT_LOADED             = 0,
     ST_IDLE                   = 1,
@@ -61,25 +72,40 @@ enum {
     ST_UNKNOWN                = 5
 };
 
+/* ===== Overlay states (safety) ===== */
+enum {
+    OV_NONE                   = 0,
+    OV_CHUCK_COVER_OPENED     = 1,
+    OV_SPINDLE_RESUME_REQ     = 2,
+    OV_FEED_RESUME_REQ        = 3
+};
+
 /* ===== LED modes ===== */
 enum {
     LED_OFF                   = 0,
     LED_IDLE_LOADED_DBLINK    = 1,  /* 100ms ON,100ms OFF,100ms ON,700ms OFF */
     LED_PAUSED_BLINK          = 2,  /* 500ms ON / 500ms OFF */
-    LED_RUNNING_ON            = 3
+    LED_RUNNING_ON            = 3,
+    LED_COVER_FAST            = 4   /* 100ms ON / 100ms OFF (repeat) */
 };
 
 /* ===== Edge memories & latches ===== */
 static bool prevCycleStartLevel        = false;
 static bool prevCycleAbortLevel        = false;
 static bool prevSingleBlockLevel       = false;
+static bool prevChuckCoverLevel        = false;
 
 static bool postStartPausePending      = false;   /* after Start with SB=ON, pause when RUNNING appears */
-static bool feedHoldLatched            = false;   /* mirror of the feedHoldCmd we drive */
+static bool feedInhibitLatched            = false;   /* mirror of the feedInhibit we drive */
 static bool pendingUnloadAfterStop     = false;   /* after Stop: when we see IDLE, pulse Unload once */
 static bool firstStepAfterEnterSB      = false;   /* first GREEN in ST_PAUSED_SINGLE_BLOCK must STEP */
 
 static int  prevState                  = ST_UNKNOWN;
+
+/* Overlay machinery */
+static int  overlayState               = OV_NONE;
+static int  prevStateBeforeCover       = ST_UNKNOWN;
+static bool spindleUninhibitCommanded  = false;   /* set when we drop spindleInhibit in OV_SPINDLE_RESUME_REQ */
 
 /* ===== Pulse timers (seconds) ===== */
 static double t_start   = 0.0;
@@ -106,7 +132,7 @@ static inline void pulse_output_pin(double *timer_ref, hal_bit_t *pin_ref, float
 
 FUNCTION(_)
 {
-    /* ===== Decode explicit state from feedback + SB ===== */
+    /* ===== Derive BASE state from halui pins + SB ===== */
     int state = ST_UNKNOWN;
 
     if (!programLoaded) {
@@ -116,75 +142,95 @@ FUNCTION(_)
     } else if (programRunning) {
         state = ST_RUNNING;
     } else if (programPaused) {
-        if (singleBlock) {
-            state = ST_PAUSED_SINGLE_BLOCK;
-        } else {
-            state = ST_PAUSED_NO_SINGLE_BLOCK;
-        }
+        state = singleBlock ? ST_PAUSED_SINGLE_BLOCK : ST_PAUSED_NO_SINGLE_BLOCK;
     } else {
         state = ST_UNKNOWN;
     }
 
     state_dbg = state;
 
-    /* Arm „first step” când INTRĂM în ST_PAUSED_SINGLE_BLOCK */
+    /* Arm „first step” when entering ST_PAUSED_SINGLE_BLOCK */
     if ((state == ST_PAUSED_SINGLE_BLOCK) && (prevState != ST_PAUSED_SINGLE_BLOCK)) {
         firstStepAfterEnterSB = true;
     }
-    /* Dacă ieșim din starea SB-paused, resetăm armarea (nu o cărăm în alte stări) */
     if (state != ST_PAUSED_SINGLE_BLOCK) {
         firstStepAfterEnterSB = false;
     }
 
-    /* ===== Status pins ===== */
-    statusProgramIdle       = (state == ST_IDLE);
-    statusProgramRunning    = (state == ST_RUNNING);
-    statusProgramPaused     = (state == ST_PAUSED_NO_SINGLE_BLOCK) || (state == ST_PAUSED_SINGLE_BLOCK);
-    statusIsSingleBlock     = singleBlock;
-
-    /* statusStepPaused: setat din interiorul stării SB-paused; default false */
-    statusStepPaused        = false;
-    if (state == ST_PAUSED_SINGLE_BLOCK) {
-        /* „pauză în cadrul unui pas” = motionType != 0 (când togglim feed-hold) */
-        statusStepPaused    = (motionType != 0);
-    }
-
-    /* ===== Edge detection (rising edges) ===== */
+    /* ===== Edges ===== */
     bool cycleStartLevel    = cycleStart;
     bool cycleAbortLevel    = cycleAbort;
     bool singleBlockLevel   = singleBlock;
+    bool chuckCoverLevel    = chuckCoverOpened;
 
     bool cycleStartEdge     = ( cycleStartLevel  && !prevCycleStartLevel );
     bool cycleAbortEdge     = ( cycleAbortLevel  && !prevCycleAbortLevel );
     bool singleBlockRise    = ( singleBlockLevel && !prevSingleBlockLevel );
     bool singleBlockFall    = ( !singleBlockLevel && prevSingleBlockLevel );
+    bool chuckCoverRise     = ( chuckCoverLevel && !prevChuckCoverLevel );
+    bool chuckCoverFall     = ( !chuckCoverLevel && prevChuckCoverLevel );
 
-    /* ===== Housekeeping on SB transitions ===== */
+    /* ===== Overlay: enter/exit logic for chuck cover ===== */
+    if (chuckCoverRise) {
+        /* Enter safety overlay */
+        prevStateBeforeCover = state;           /* remember base state at opening */
+        overlayState         = OV_CHUCK_COVER_OPENED;
+        /* Force safety actions */
+        feedInhibit          = 1;
+        feedInhibitLatched      = true;
+        spindleInhibit       = 1;
+        spindleUninhibitCommanded = false;
+    }
 
-    /* SB 0->1 while RUNNING: pause once to enter PausedWithSingleBlock */
-    if (singleBlockRise && (state == ST_RUNNING)) {
+    if (chuckCoverFall && (overlayState == OV_CHUCK_COVER_OPENED)) {
+        /* Only start resume sequence if we WERE in RUNNING before cover opened */
+        if (prevStateBeforeCover == ST_RUNNING) {
+            overlayState = OV_SPINDLE_RESUME_REQ;
+        } else {
+            overlayState = OV_NONE;            /* no resume flow needed */
+        }
+        spindleUninhibitCommanded = false;
+    }
+
+    /* ===== Status pins (base + overlay) ===== */
+    statusProgramIdle       = (state == ST_IDLE);
+    statusProgramRunning    = (state == ST_RUNNING);
+    statusProgramPaused     = (state == ST_PAUSED_NO_SINGLE_BLOCK) || (state == ST_PAUSED_SINGLE_BLOCK);
+    statusIsSingleBlock     = singleBlock;
+
+    statusStepPaused        = 0;
+    if (state == ST_PAUSED_SINGLE_BLOCK) {
+        statusStepPaused    = (motionType != 0);
+    }
+
+    /* Overlay status */
+    statusChuckCoverOpened      = (overlayState == OV_CHUCK_COVER_OPENED);
+    statusSpindleResumeRequired = (overlayState == OV_SPINDLE_RESUME_REQ);
+    statusFeedResumeRequired    = (overlayState == OV_FEED_RESUME_REQ);
+
+    overlay_dbg = overlayState;
+
+    /* ===== Housekeeping on SB transitions (base behavior) ===== */
+    if (singleBlockRise && (state == ST_RUNNING) && (overlayState == OV_NONE)) {
         pulse_output_pin(&t_pause, &pauseProgram, outputPulseDuration);
         last_action_dbg = 2;
-
-        if (feedHoldLatched) {
-            feedHoldCmd     = 0;
-            feedHoldLatched = false;
+        if (feedInhibitLatched) {
+            feedInhibit     = 0;
+            feedInhibitLatched = false;
             last_action_dbg = 8;
         }
     }
 
-    /* SB 1->0: release feed-hold if active; don't auto-resume; clear pending */
     if (singleBlockFall) {
-        if (feedHoldLatched) {
-            feedHoldCmd     = 0;
-            feedHoldLatched = false;
+        if (feedInhibitLatched) {
+            feedInhibit     = 0;
+            feedInhibitLatched = false;
             last_action_dbg = 8;
         }
         postStartPausePending = false;
     }
 
-    /* If we armed "pause after Start in SB", consume it when RUNNING appears */
-    if (postStartPausePending && singleBlockLevel && (state == ST_RUNNING)) {
+    if (postStartPausePending && singleBlockLevel && (state == ST_RUNNING) && (overlayState == OV_NONE)) {
         pulse_output_pin(&t_pause, &pauseProgram, outputPulseDuration);
         last_action_dbg       = 2;
         postStartPausePending = false;
@@ -192,140 +238,180 @@ FUNCTION(_)
 
     postStartPausePending_dbg = postStartPausePending;
 
-    /* ===== Auto-unload after Stop: when we see IDLE and program is still loaded ===== */
+    /* ===== Auto-unload after Stop (base) ===== */
     if (pendingUnloadAfterStop && (state == ST_IDLE) && programLoaded) {
         pulse_output_pin(&t_unload, &unloadProgram, outputPulseDuration);
         last_action_dbg        = 6; /* unload */
         pendingUnloadAfterStop = false;
     }
-
-    /* If program got unloaded by other means, clear the latch */
     if (pendingUnloadAfterStop && !programLoaded) {
         pendingUnloadAfterStop = false;
     }
 
-    /* ===== GREEN (cycleStart) behavior ===== */
+    /* ===== GREEN behavior ===== */
     if (cycleStartEdge) {
-
-        switch (state) {
-
-            case ST_IDLE: {
-                /* Start program; if SB=ON, arm a pause once we see RUNNING */
-                pulse_output_pin(&t_start, &startProgram, outputPulseDuration);
-                last_action_dbg = 1;
-
-                if (singleBlockLevel) {
-                    postStartPausePending = true;
+        /* Overlay has priority */
+        if (overlayState == OV_CHUCK_COVER_OPENED) {
+            /* Ignore CYCLestart while cover is open */
+        }
+        else if (overlayState == OV_SPINDLE_RESUME_REQ) {
+            /* Allow spindle to run; then wait for spindleAtSpeed */
+            spindleInhibit = 0;
+            spindleUninhibitCommanded = true;
+            /* Transition will happen when spindleAtSpeed==1 */
+        }
+        else if (overlayState == OV_FEED_RESUME_REQ) {
+            /* Respect Single-Block */
+            if (!singleBlockLevel) {
+                /* Normal: resume feed */
+                if (feedInhibitLatched) {
+                    feedInhibit     = 0;
+                    feedInhibitLatched = false;
+                    last_action_dbg = 8;
                 }
-            } break;
-
-            case ST_RUNNING: {
-                if (!singleBlockLevel) {
-                    /* No SB: Pause -> go to PausedNoSingleBlock */
-                    pulse_output_pin(&t_pause, &pauseProgram, outputPulseDuration);
-                    last_action_dbg = 2;
-                } else {
-                    /* SB=ON while still RUNNING (rare):
-                       motionType != 0 => toggle feed-hold
-                       motionType == 0 => step (ensure hold is off) */
-                    if (motionType != 0) {
-                        if (!feedHoldLatched) {
-                            feedHoldCmd     = 1;
-                            feedHoldLatched = true;
-                            last_action_dbg = 7;
-                        } else {
-                            feedHoldCmd     = 0;
-                            feedHoldLatched = false;
-                            last_action_dbg = 8;
-                        }
-                    } else {
-                        if (feedHoldLatched) {
-                            feedHoldCmd     = 0;
-                            feedHoldLatched = false;
-                            last_action_dbg = 8;
-                        }
-                        pulse_output_pin(&t_step, &stepProgram, outputPulseDuration);
-                        last_action_dbg = 4;
-                    }
-                }
-            } break;
-
-            case ST_PAUSED_NO_SINGLE_BLOCK: {
-                /* No SB: Resume -> back to RUNNING */
-                pulse_output_pin(&t_resume, &resumeProgram, outputPulseDuration);
-                last_action_dbg = 3;
-            } break;
-
-            case ST_PAUSED_SINGLE_BLOCK: {
-                /* Prima apăsare după intrarea în SB-paused: forțează STEP, indiferent de motion */
-                if (firstStepAfterEnterSB) {
-                    if (feedHoldLatched) {
-                        feedHoldCmd     = 0;
-                        feedHoldLatched = false;
-                        last_action_dbg = 8;
-                    }
-                    pulse_output_pin(&t_step, &stepProgram, outputPulseDuration);
-                    last_action_dbg        = 4;
-                    firstStepAfterEnterSB  = false;
-                    break;
-                }
-
-                /* După prima apăsare: logica standard SB
-                   - motionType == 0  : STEP next block (ensure hold off)
-                   - motionType != 0  : toggle feed-hold (persistent) */
+                overlayState = OV_NONE;  /* back to base; base should be Running naturally */
+            } else {
+                /* SB ON: motionType != 0 -> release hold; motionType == 0 -> STEP */
                 if (motionType != 0) {
-                    if (!feedHoldLatched) {
-                        feedHoldCmd     = 1;
-                        feedHoldLatched = true;
-                        last_action_dbg = 7;
-                    } else {
-                        feedHoldCmd     = 0;
-                        feedHoldLatched = false;
+                    if (feedInhibitLatched) {
+                        feedInhibit     = 0;
+                        feedInhibitLatched = false;
                         last_action_dbg = 8;
                     }
+                    /* stay in overlay until motion resolves into base state; then overlay ends */
+                    overlayState = OV_NONE;
                 } else {
-                    if (feedHoldLatched) {
-                        feedHoldCmd     = 0;
-                        feedHoldLatched = false;
+                    if (feedInhibitLatched) {
+                        feedInhibit     = 0;
+                        feedInhibitLatched = false;
                         last_action_dbg = 8;
                     }
                     pulse_output_pin(&t_step, &stepProgram, outputPulseDuration);
                     last_action_dbg = 4;
+                    overlayState = OV_NONE;
                 }
-            } break;
+            }
+        }
+        else {
+            /* === Base machine behavior (only when no overlay) === */
+            switch (state) {
 
-            case ST_NOT_LOADED:
-            case ST_UNKNOWN:
-            default: {
-                /* ignore */
-            } break;
+                case ST_IDLE: {
+                    pulse_output_pin(&t_start, &startProgram, outputPulseDuration);
+                    last_action_dbg = 1;
+                    if (singleBlockLevel) {
+                        postStartPausePending = true;
+                    }
+                } break;
+
+                case ST_RUNNING: {
+                    if (!singleBlockLevel) {
+                        pulse_output_pin(&t_pause, &pauseProgram, outputPulseDuration);
+                        last_action_dbg = 2;
+                    } else {
+                        if (motionType != 0) {
+                            if (!feedInhibitLatched) { feedInhibit = 1; feedInhibitLatched = true; last_action_dbg = 7; }
+                            else                  { feedInhibit = 0; feedInhibitLatched = false; last_action_dbg = 8; }
+                        } else {
+                            if (feedInhibitLatched) { feedInhibit = 0; feedInhibitLatched = false; last_action_dbg = 8; }
+                            pulse_output_pin(&t_step, &stepProgram, outputPulseDuration);
+                            last_action_dbg = 4;
+                        }
+                    }
+                } break;
+
+                case ST_PAUSED_NO_SINGLE_BLOCK: {
+                    pulse_output_pin(&t_resume, &resumeProgram, outputPulseDuration);
+                    last_action_dbg = 3;
+                } break;
+
+                case ST_PAUSED_SINGLE_BLOCK: {
+                    if (firstStepAfterEnterSB) {
+                        if (feedInhibitLatched) { feedInhibit = 0; feedInhibitLatched = false; last_action_dbg = 8; }
+                        pulse_output_pin(&t_step, &stepProgram, outputPulseDuration);
+                        last_action_dbg = 4;
+                        firstStepAfterEnterSB = false;
+                        break;
+                    }
+                    if (motionType != 0) {
+                        if (!feedInhibitLatched) { feedInhibit = 1; feedInhibitLatched = true; last_action_dbg = 7; }
+                        else                  { feedInhibit = 0; feedInhibitLatched = false; last_action_dbg = 8; }
+                    } else {
+                        if (feedInhibitLatched) { feedInhibit = 0; feedInhibitLatched = false; last_action_dbg = 8; }
+                        pulse_output_pin(&t_step, &stepProgram, outputPulseDuration);
+                        last_action_dbg = 4;
+                    }
+                } break;
+
+                case ST_NOT_LOADED:
+                case ST_UNKNOWN:
+                default: {
+                    /* ignore */
+                } break;
+            }
         }
     }
 
-    /* ===== RED (cycleAbort) behavior: stop from ANY state ===== */
+    /* ===== RED behavior (Stop) — applies in ANY state / overlay ===== */
     if (cycleAbortEdge) {
         pulse_output_pin(&t_stop, &stopProgram, outputPulseDuration);
         last_action_dbg       = 5;
 
-        /* clear latches and pending; feedback will drive us back to IDLE */
         postStartPausePending = false;
 
-        if (feedHoldLatched) {
-            feedHoldCmd     = 0;
-            feedHoldLatched = false;
+        if (feedInhibitLatched) {
+            feedInhibit     = 0;
+            feedInhibitLatched = false;
             last_action_dbg = 8;
         }
 
-        /* arm auto-unload: when we see IDLE, emit unload once */
+        /* reset overlay */
+        overlayState = OV_NONE;
+        spindleInhibit = 0;
+        spindleUninhibitCommanded = false;
+
+        /* arm auto-unload */
         pendingUnloadAfterStop = true;
 
-        /* dacă plecăm cu Stop din SB-paused, nu păstrăm „first step” armat */
+        /* and SB first-step arma off */
         firstStepAfterEnterSB = false;
     }
 
-    /* ===== LED state machine (CycleStart LED) ===== */
-    /* Choose mode from current state */
-    if (state == ST_PAUSED_NO_SINGLE_BLOCK || state == ST_PAUSED_SINGLE_BLOCK) {
+    /* ===== Overlay progress conditions (no button) ===== */
+    if (overlayState == OV_SPINDLE_RESUME_REQ) {
+        /* If cover re-opened, go back */
+        if (chuckCoverLevel) {
+            overlayState = OV_CHUCK_COVER_OPENED;
+            spindleUninhibitCommanded = false;
+            /* ensure safety levels */
+            feedInhibit     = 1;
+            feedInhibitLatched = true;
+            spindleInhibit  = 1;
+        } else {
+            /* If we already allowed spindle and speed is reached, move on */
+            if (spindleUninhibitCommanded && spindleAtSpeed) {
+                overlayState = OV_FEED_RESUME_REQ;
+            }
+        }
+    }
+    else if (overlayState == OV_FEED_RESUME_REQ) {
+        /* If cover re-opens, back to cover-opened */
+        if (chuckCoverLevel) {
+            overlayState = OV_CHUCK_COVER_OPENED;
+            /* safety */
+            feedInhibit     = 1;
+            feedInhibitLatched = true;
+            spindleInhibit  = 1;
+        }
+    }
+
+    /* ===== LED state machine ===== */
+    /* Choose LED mode from overlay first (priority), otherwise base state */
+    if (overlayState == OV_CHUCK_COVER_OPENED) {
+        led_mode = LED_COVER_FAST;              /* 100/100 */
+    } else if (overlayState == OV_SPINDLE_RESUME_REQ || overlayState == OV_FEED_RESUME_REQ) {
+        led_mode = LED_PAUSED_BLINK;            /* 500/500 */
+    } else if (state == ST_PAUSED_NO_SINGLE_BLOCK || state == ST_PAUSED_SINGLE_BLOCK) {
         led_mode = LED_PAUSED_BLINK;
     } else if (state == ST_RUNNING) {
         led_mode = LED_RUNNING_ON;
@@ -335,81 +421,59 @@ FUNCTION(_)
         led_mode = LED_OFF;
     }
 
-    /* Reset LED timer on mode change */
     if (led_mode != led_mode_prev) {
         led_timer     = 0.0;
         led_mode_prev = led_mode;
     }
 
-    /* Advance timer (base period 1.0s) */
     double dt = fperiod;
-
     led_timer += dt;
+    /* We make a 1.0s cycle for all LED patterns; COVER_FAST uses 0.2s subcycle logic */
     if (led_timer >= 1.0) {
         led_timer -= 1.0;
-        if (led_timer < 0.0) {
-            led_timer = 0.0;
-        }
+        if (led_timer < 0.0) led_timer = 0.0;
     }
 
-    /* Apply LED pattern */
     switch (led_mode) {
-        case LED_OFF: {
+        case LED_OFF:
             cycleStartLedStatus = 0;
-        } break;
-
-        case LED_RUNNING_ON: {
+            break;
+        case LED_RUNNING_ON:
             cycleStartLedStatus = 1;
-        } break;
-
-        case LED_PAUSED_BLINK: {
-            /* 500ms ON / 500ms OFF */
+            break;
+        case LED_PAUSED_BLINK:
             cycleStartLedStatus = (led_timer < 0.5) ? 1 : 0;
-        } break;
-
-        case LED_IDLE_LOADED_DBLINK: {
-            /* 0–0.1 ON, 0.1–0.2 OFF, 0.2–0.3 ON, 0.3–1.0 OFF */
-            if ((led_timer < 0.1) || (led_timer >= 0.2 && led_timer < 0.3)) {
+            break;
+        case LED_IDLE_LOADED_DBLINK:
+            if ((led_timer < 0.1) || (led_timer >= 0.2 && led_timer < 0.3))
                 cycleStartLedStatus = 1;
-            } else {
+            else
                 cycleStartLedStatus = 0;
-            }
+            break;
+        case LED_COVER_FAST: {
+            /* 100ms ON / 100ms OFF repeating -> map led_timer [0..1) into 0.2s repeating window */
+            double t = led_timer;
+            /* Reduce to 0..0.2 window */
+            while (t >= 0.2) t -= 0.2;
+            cycleStartLedStatus = (t < 0.1) ? 1 : 0;
         } break;
-
-        default: {
+        default:
             cycleStartLedStatus = 0;
-        } break;
+            break;
     }
 
     /* ===== Update pulse timers ===== */
-    if (t_start  > 0.0) {
-        t_start -= dt;
-        if (t_start <= 0.0) { t_start = 0.0; startProgram = 0; }
-    }
-    if (t_pause  > 0.0) {
-        t_pause -= dt;
-        if (t_pause <= 0.0) { t_pause = 0.0; pauseProgram = 0; }
-    }
-    if (t_resume > 0.0) {
-        t_resume -= dt;
-        if (t_resume <= 0.0) { t_resume = 0.0; resumeProgram = 0; }
-    }
-    if (t_step   > 0.0) {
-        t_step -= dt;
-        if (t_step <= 0.0) { t_step = 0.0; stepProgram = 0; }
-    }
-    if (t_stop   > 0.0) {
-        t_stop -= dt;
-        if (t_stop <= 0.0) { t_stop = 0.0; stopProgram = 0; }
-    }
-    if (t_unload > 0.0) {
-        t_unload -= dt;
-        if (t_unload <= 0.0) { t_unload = 0.0; unloadProgram = 0; }
-    }
+    if (t_start  > 0.0) { t_start  -= dt; if (t_start  <= 0.0) { t_start  = 0.0; startProgram  = 0; } }
+    if (t_pause  > 0.0) { t_pause  -= dt; if (t_pause  <= 0.0) { t_pause  = 0.0; pauseProgram  = 0; } }
+    if (t_resume > 0.0) { t_resume -= dt; if (t_resume <= 0.0) { t_resume = 0.0; resumeProgram = 0; } }
+    if (t_step   > 0.0) { t_step   -= dt; if (t_step   <= 0.0) { t_step   = 0.0; stepProgram   = 0; } }
+    if (t_stop   > 0.0) { t_stop   -= dt; if (t_stop   <= 0.0) { t_stop   = 0.0; stopProgram   = 0; } }
+    if (t_unload > 0.0) { t_unload -= dt; if (t_unload <= 0.0) { t_unload = 0.0; unloadProgram = 0; } }
 
-    /* ===== Latch inputs & state for next cycle ===== */
+    /* ===== Latch inputs & base state ===== */
     prevCycleStartLevel  = cycleStartLevel;
     prevCycleAbortLevel  = cycleAbortLevel;
     prevSingleBlockLevel = singleBlockLevel;
+    prevChuckCoverLevel  = chuckCoverLevel;
     prevState            = state;
 }
