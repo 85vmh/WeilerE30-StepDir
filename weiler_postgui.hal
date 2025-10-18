@@ -68,4 +68,6 @@ net xmax TeachInLathe.axis-limits.x-max   => ini.x.max_limit
 net zmin TeachInLathe.axis-limits.z-min   => ini.z.min_limit
 net zmax TeachInLathe.axis-limits.z-max   => ini.z.max_limit
 
-
+net do-stop     program-state.0.stopProgram         =>  halui.program.stop
+net opt-stop    halui.program.optional-stop.is-on   =>  motion.digital-in-00  
+net sp.at-speed                                     =>  motion.digital-in-01
