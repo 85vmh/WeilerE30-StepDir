@@ -94,6 +94,7 @@ static bool prevCycleStartLevel        = false;
 static bool prevCycleAbortLevel        = false;
 static bool prevSingleBlockLevel       = false;
 static bool prevChuckCoverLevel        = false;
+static bool prevProgramIdleLevel       = false;
 
 static bool postStartPausePending      = false;   /* after Start with SB=ON, pause when RUNNING appears */
 static bool feedHoldLatched            = false;   /* mirror of the feedInhibit we drive */
@@ -162,7 +163,9 @@ FUNCTION(_)
     bool cycleAbortLevel    = cycleAbort;
     bool singleBlockLevel   = singleBlock;
     bool chuckCoverLevel    = chuckCoverOpened;
-
+    bool programIdleLevel   = programIdle;
+    
+    bool programIdleRise    = ( programIdleLevel && !prevProgramIdleLevel );
     bool cycleStartEdge     = ( cycleStartLevel  && !prevCycleStartLevel );
     bool cycleAbortEdge     = ( cycleAbortLevel  && !prevCycleAbortLevel );
     bool singleBlockRise    = ( singleBlockLevel && !prevSingleBlockLevel );
@@ -251,10 +254,12 @@ FUNCTION(_)
     postStartPausePending_dbg = postStartPausePending;
 
     /* ===== Auto-unload after Stop (base) ===== */
-    if (pendingUnloadAfterStop && programLoaded) {
-        pulse_output_pin(&t_unload, &unloadProgram, outputPulseDuration);
-        last_action_dbg        = 6; /* unload */
-        pendingUnloadAfterStop = false;
+    if (pendingUnloadAfterStop && programIdleRise) {
+        if (!programLoaded) {
+            pulse_output_pin(&t_unload, &unloadProgram, outputPulseDuration);
+            last_action_dbg        = 6; /* unload */
+            pendingUnloadAfterStop = false;
+        }
     }
     if (pendingUnloadAfterStop && !programLoaded) {
         pendingUnloadAfterStop = false;
@@ -483,6 +488,7 @@ FUNCTION(_)
     if (t_unload > 0.0) { t_unload -= dt; if (t_unload <= 0.0) { t_unload = 0.0; unloadProgram = 0; } }
 
     /* ===== Latch inputs & base state ===== */
+    prevProgramIdleLevel = programIdleLevel;
     prevCycleStartLevel  = cycleStartLevel;
     prevCycleAbortLevel  = cycleAbortLevel;
     prevSingleBlockLevel = singleBlockLevel;
