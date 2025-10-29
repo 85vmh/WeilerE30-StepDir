@@ -251,7 +251,7 @@ FUNCTION(_)
     postStartPausePending_dbg = postStartPausePending;
 
     /* ===== Auto-unload after Stop (base) ===== */
-    if (pendingUnloadAfterStop && (state == ST_IDLE) && programLoaded) {
+    if (pendingUnloadAfterStop && programLoaded) {
         pulse_output_pin(&t_unload, &unloadProgram, outputPulseDuration);
         last_action_dbg        = 6; /* unload */
         pendingUnloadAfterStop = false;
