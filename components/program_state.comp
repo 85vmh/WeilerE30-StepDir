@@ -25,7 +25,7 @@ pin out bit   pauseProgram;         /* -> halui.program.pause  (pulse) */
 pin out bit   resumeProgram;        /* -> halui.program.resume (pulse) */
 pin out bit   stepProgram;          /* -> halui.program.step   (pulse) */
 pin out bit   stopProgram;          /* -> halui.program.stop   (pulse) */
-pin out bit   unloadProgram;        /* spare (not used here) */
+pin out bit   finishedProgram;      /* -> halui.mode.manual    (pulse) */
 
 /* Feed-hold + Spindle inhibit (levels) */
 pin out bit   feedInhibit;          /* -> motion.feed-inhibit (0=run, 1=hold) */
@@ -98,7 +98,7 @@ static bool prevProgramIdleLevel       = false;
 
 static bool postStartPausePending      = false;   /* after Start with SB=ON, pause when RUNNING appears */
 static bool feedHoldLatched            = false;   /* mirror of the feedInhibit we drive */
-static bool pendingUnloadAfterStop     = false;   /* after Stop: when we see IDLE, pulse Unload once */
+static bool pendingFinishedAfterStop   = false;   /* after Stop: when we see IDLE, pulse finishedProgram once */
 static bool firstStepAfterEnterSB      = false;   /* first GREEN in ST_PAUSED_SINGLE_BLOCK must STEP */
 
 static int  prevState                  = ST_UNKNOWN;
@@ -109,12 +109,12 @@ static int  prevStateBeforeCover       = ST_UNKNOWN;
 static bool spindleUninhibitCommanded  = false;   /* set when we drop spindleInhibit in OV_SPINDLE_RESUME_REQ */
 
 /* ===== Pulse timers (seconds) ===== */
-static double t_start   = 0.0;
-static double t_pause   = 0.0;
-static double t_resume  = 0.0;
-static double t_step    = 0.0;
-static double t_stop    = 0.0;
-static double t_unload  = 0.0;
+static double t_start       = 0.0;
+static double t_pause       = 0.0;
+static double t_resume      = 0.0;
+static double t_step        = 0.0;
+static double t_stop        = 0.0;
+static double t_finished    = 0.0;
 
 /* ===== LED state ===== */
 static int    led_mode       = LED_OFF;
@@ -253,16 +253,16 @@ FUNCTION(_)
 
     postStartPausePending_dbg = postStartPausePending;
 
-    /* ===== Auto-unload after Stop (base) ===== */
-    if (pendingUnloadAfterStop && programIdleRise) {
-        if (!programLoaded) {
-            pulse_output_pin(&t_unload, &unloadProgram, outputPulseDuration);
-            last_action_dbg        = 6; /* unload */
-            pendingUnloadAfterStop = false;
-        }
+    /* ===== Finished after Stop (base) =====
+       Dacă nu eram IDLE la STOP, pulsează la primul 0->1 pe programIdle.
+       Dacă între timp se apasă CycleStart, anulăm pending-ul. */
+    if (pendingFinishedAfterStop && programIdleRise) {
+        pulse_output_pin(&t_finished, &finishedProgram, outputPulseDuration);
+        last_action_dbg            = 6; /* finished */
+        pendingFinishedAfterStop   = false;
     }
-    if (pendingUnloadAfterStop && !programLoaded) {
-        pendingUnloadAfterStop = false;
+    if (pendingFinishedAfterStop && cycleStartEdge) {
+        pendingFinishedAfterStop   = false;
     }
 
     /* ===== GREEN behavior ===== */
@@ -387,8 +387,14 @@ FUNCTION(_)
         spindleInhibit = 0;
         spindleUninhibitCommanded = false;
 
-        /* arm auto-unload */
-        pendingUnloadAfterStop = true;
+        /* arm finished-after-stop */
+        pendingFinishedAfterStop = true;
+        /* dacă suntem DEJA în IDLE, pulsam imediat finished și dezarmăm pending */
+        if (programIdle) {
+            pulse_output_pin(&t_finished, &finishedProgram, outputPulseDuration);
+            last_action_dbg            = 6; /* finished */
+            pendingFinishedAfterStop   = false;
+        }
 
         /* and SB first-step arma off */
         firstStepAfterEnterSB = false;
@@ -485,7 +491,7 @@ FUNCTION(_)
     if (t_resume > 0.0) { t_resume -= dt; if (t_resume <= 0.0) { t_resume = 0.0; resumeProgram = 0; } }
     if (t_step   > 0.0) { t_step   -= dt; if (t_step   <= 0.0) { t_step   = 0.0; stepProgram   = 0; } }
     if (t_stop   > 0.0) { t_stop   -= dt; if (t_stop   <= 0.0) { t_stop   = 0.0; stopProgram   = 0; } }
-    if (t_unload > 0.0) { t_unload -= dt; if (t_unload <= 0.0) { t_unload = 0.0; unloadProgram = 0; } }
+    if (t_finished > 0.0) { t_finished -= dt; if (t_finished <= 0.0) { t_finished = 0.0; finishedProgram = 0; } }
 
     /* ===== Latch inputs & base state ===== */
     prevProgramIdleLevel = programIdleLevel;
