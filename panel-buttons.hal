@@ -2,61 +2,8 @@
 #Panel buttons
 #**************************
 
-# loadrt toggle       names=toggle.pause-resume
-# loadrt toggle2nist  names=nistToggle.pause-resume
-loadrt  program_state
-loadrt  debounce    cfg=1
-
-addf    program-state.0     servo-thread
-addf    debounce.0          servo-thread
-
-# addf toggle.pause-resume      servo-thread
-# addf nistToggle.pause-resume  servo-thread
-
-
 #Power & Estop
 net in.estop-free       => classicladder.0.in-00    iocontrol.0.emc-enable-in
 net in.enable-drives    => classicladder.0.in-01
 net out.machine-on      classicladder.0.out-01  =>  halui.machine.on
 net out.machine-off     classicladder.0.out-02  =>  halui.machine.off
-#net out-program-stop    classicladder.0.out-08  =>  halui.program.stop
-net in.manual-mode      halui.mode.is-manual    =>  classicladder.0.in-13
-#net out.manual-mode     classicladder.0.out-09  =>  halui.mode.manual
-net in.mdi-mode         halui.mode.is-mdi       =>  classicladder.0.in-14
-
-setp debounce.0.delay   30
-
-setp program-state.0.outputPulseDuration    0.15
-net in.cycle-start  =>  debounce.0.0.in 
-net db-cycle-start  debounce.0.0.out          => program-state.0.cycleStart
-net in.cycle-abort  =>  program-state.0.cycleAbort
-net curr-vel    motion.motion-type          => program-state.0.motionType   
-net st-idle     halui.program.is-idle       => program-state.0.programIdle
-net st-running  halui.program.is-running    => program-state.0.programRunning
-net st-paused   halui.program.is-paused     => program-state.0.programPaused
-
-net do-run      program-state.0.startProgram    =>  halui.program.run      =>   halui.mode.auto
-net do-pause    program-state.0.pauseProgram    =>  halui.program.pause
-net do-resume   program-state.0.resumeProgram   =>  halui.program.resume
-net do-step     program-state.0.stepProgram     =>  halui.program.step
-# net do-stop     program-state.0.stopProgram     =>  halui.program.stop  #this causes an error, not sure why
-net do-unload   program-state.0.unloadProgram   =>  halui.mode.manual     
-net do-fh       program-state.0.feedInhibit     =>  motion.feed-hold
-
-#CycleStart button - handles run/step
-#CycleStop button - handles pause/resume
-# net in.cycle-start  =>  and.program-run.in0     and.program-step.in0
-# net in.cycle-abort  =>  and.program-pause.in0   and.program-resume.in0  classicladder.0.in-19  
-
-# net green-btn.idle-on   halui.program.is-idle       => and.program-run.in1  classicladder.0.in-20
-# net green-btn.run-sig   and.program-run.out         => halui.program.run    halui.mode.auto # check if we want auto now  
-# net green-btn.step-sig  and.program-step.out        => halui.program.step
-
-# net red-btn.pause-on    halui.program.is-paused     => and.program-pause.in1    and.program-step.in1    nistToggle.pause-resume.is-on  
-# net red-btn.run-on      halui.program.is-running    => and.program-resume.in1
-# net red-btn.pause-sig   and.program-pause.out       => or.pause-resume.in0
-# net red-btn.resume-sig  and.program-resume.out      => or.pause-resume.in1 
-# net red-btn.toggle-ok   or.pause-resume.out         => toggle.pause-resume.in 
-# net red-btn.toggle-sig  toggle.pause-resume.out     => nistToggle.pause-resume.in 
-# net red-btn.toggle-on   nistToggle.pause-resume.on  => halui.program.pause
-# net red-btn.toggle-off  nistToggle.pause-resume.off => halui.program.resume

@@ -1,13 +1,7 @@
-# halshow watchlist created Sat Oct 05 12:40:57 EEST 2024
+# halshow watchlist created Tue Oct 21 22:36:05 UTC 2025
 
-sig+sp.enable
-sig+sp.gear-ratio
-sig+sp.revs
+pin+hm2_7i95.0.read.time
+pin+hm2_7i95.0.write.time
+pin+hm2_7i95.0.sserial.port-0.fault-count
+pin+hm2_7i95.0.sserial.port-0.run
 pin+servo-thread.time
-param+servo-thread.tmax
-pin+ini.x.max_acceleration
-pin+ini.x.max_velocity
-pin+ini.z.max_velocity
-pin+ini.z.max_acceleration
-pin+ini.traj_default_velocity
-pin+ini.traj_max_velocity

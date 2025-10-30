@@ -1,6 +1,56 @@
 # Include your custom HAL commands here
-# This file will not be overwritten when you run PNCconf again
 
-# Allow the machine to be powered on
-net out.nc-ready    <=  classicladder.0.out-00
+loadrt  program_state
+loadrt  debounce            cfg=2
 
+addf    program-state.0     servo-thread
+addf    debounce.0          servo-thread
+setp    debounce.0.delay    30
+
+# for the pulsed outputs, set the duration of the pulse in seconds
+setp    program-state.0.outputPulseDuration     0.15
+
+
+net in.manual-mode      halui.mode.is-manual    =>  classicladder.0.in-13
+net in.mdi-mode         halui.mode.is-mdi       =>  classicladder.0.in-14
+net in.is-auto-mode     halui.mode.is-auto      =>  classicladder.0.in-15
+
+
+net in.cycle-start  =>  debounce.0.0.in
+net in.cycle-abort  =>  debounce.0.1.in
+
+# set the inputs for the custom program_state component
+net prg.cycle-start     debounce.0.0.out            =>  program-state.0.cycleStart
+net prg.cycle-abort     debounce.0.1.out            =>  program-state.0.cycleAbort
+net curr-vel            motion.motion-type          =>  program-state.0.motionType
+net in.chuck-cover                                  =>  program-state.0.chuckCoverOpened
+net sp.at-speed                                     =>  program-state.0.spindleAtSpeed   
+net prg.prgIdle         halui.program.is-idle       =>  program-state.0.programIdle
+net prg.running         halui.program.is-running    =>  program-state.0.programRunning
+net prg.paused          halui.program.is-paused     =>  program-state.0.programPaused
+
+# set the outputs for the custom program_state component
+net prg.run         program-state.0.startProgram    =>  halui.program.run      =>   halui.mode.auto
+net prg.pause       program-state.0.pauseProgram    =>  halui.program.pause
+net prg.resume      program-state.0.resumeProgram   =>  halui.program.resume
+net prg.step        program-state.0.stepProgram     =>  halui.program.step
+net prg.stop        program-state.0.stopProgram     =>  halui.program.stop
+net prg.unload      program-state.0.unloadProgram   =>  halui.mode.manual     
+net prg.fIhibit     program-state.0.feedInhibit     =>  motion.feed-hold
+net prg.sInhibit    program-state.0.spindleInhibit  =>  or.sp-inhibit.in0
+net ldr.sInhibit    classicladder.0.out-06          =>  or.sp-inhibit.in1
+net out.sInhibit    or.sp-inhibit.out               =>  spindle.0.inhibit   => not.sp-inhibit.in
+
+net sp.no-inhibit   not.sp-inhibit.out      =>  and.sp-enable.in1
+net sp.enable       and.sp-enable.out       =>  hm2_7i95.0.pwmgen.00.enable => hm2_[MESA](BOARD).0.ssr.00.out-05
+
+# In order to properly handle the M1 state in the program, we need this pins
+net opt-stop    halui.program.optional-stop.is-on   =>  motion.digital-in-00  
+net sp.at-speed                                     =>  motion.digital-in-01
+
+net out.sp-stop         classicladder.0.out-07      =>  halui.spindle.0.stop
+
+
+# Allow the machine to be powered on when the conditions are met (joystick neutral & spindle neutral)
+net out.nc-ready            <=  classicladder.0.out-00
+net out.cycle-start-led     <=  program-state.0.cycleStartLedStatus

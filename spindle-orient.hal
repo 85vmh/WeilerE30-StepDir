@@ -110,7 +110,9 @@ net and.should-orient   =>  mux.off-delay.sel #this will toggle between the off 
 net and.should-orient   =>  oneshot.0.in #this will trigger the index-enable
 
 # Velocity PID is enabled only when not orient
-net sp.enable           or.sp-enable.out    =>  hm2_7i95.0.pwmgen.00.enable => hm2_[MESA](BOARD).0.ssr.00.out-05
+net sp-enable0          or.sp-enable.out    and.sp-enable.in0
+# net sp-enable1          spindle.0.inhibit   and.sp-enable.in1
+#net sp.enable           and.sp-enable.out    =>  hm2_7i95.0.pwmgen.00.enable => hm2_[MESA](BOARD).0.ssr.00.out-05
 
 #---------------------
 net sp.vel-fb-rpm   <=  hm2_7i95.0.encoder.05.velocity-rpm  # required for UI
@@ -155,7 +157,3 @@ net in.chuck-cover      =>  classicladder.0.in-12
 net in.requested-fwd    halui.spindle.0.runs-forward    =>  classicladder.0.in-09 
 net in.spindle-neutral                                  =>  classicladder.0.in-10
 net in.requested-rev    halui.spindle.0.runs-backward   =>  classicladder.0.in-11
-
-net out.sp-inhibit      classicladder.0.out-06          =>  spindle.0.inhibit
-net out.sp-stop         classicladder.0.out-07          =>  halui.spindle.0.stop
-net in.is-auto-mode     halui.mode.is-auto              =>  classicladder.0.in-15

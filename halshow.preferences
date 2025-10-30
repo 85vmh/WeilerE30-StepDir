@@ -1,6 +1,6 @@
 # Halshow settings
 # This file is generated automatically.
-wm geometry . 916x680+20+75
+wm geometry . 965x856+18+73
 placeFrames 0.3163716814159292
 set ::ratio 0.3163716814159292
 set ::old_w_leftf 234
@@ -17,21 +17,13 @@ set ::watchlist {
     pin+program-state.0.pauseProgram
     pin+program-state.0.stepProgram
     pin+program-state.0.stopProgram
-    pin+program-state.0.resumeProgram
-    pin+program-state.0.statusProgramIdle
-    pin+program-state.0.statusProgramPaused
-    pin+program-state.0.statusProgramRunning
-    pin+program-state.0.statusIsSingleBlock
-    pin+program-state.0.statusStepPaused
-    pin+program-state.0.feedHoldCmd
-    pin+program-state.0.motionType
-    param+program-state.0.last-action-dbg
-    param+program-state.0.state-dbg
-    param+program-state.0.postStartPausePending-dbg
     pin+program-state.0.cycleStartLedStatus
-    pin+halui.program.optional-stop.is-on
-    pin+motion.digital-in-00
-    sig+sp.at-speed
+    pin+hm2_7i95.0.pwmgen.00.enable
+    pin+hm2_7i95.0.pwmgen.00.value
+    pin+spindle.0.inhibit
+    pin+hm2_7i95.0.ssr.00.out-02
+    pin+halui.mode.manual
+    pin+program-state.0.unloadProgram
 }
 set ::workmode watchhal
 set ::watchInterval 10
