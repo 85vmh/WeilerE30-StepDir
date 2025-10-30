@@ -190,9 +190,12 @@ FUNCTION(_)
 
             last_action_dbg            = 7; /* hold_on, informational */
         } else {
-            /* Not running -> ignore cover open for inhibits/overlay */
-            overlayState               = OV_NONE;
-            /* Do NOT touch feedInhibit / spindleInhibit here */
+            /* IDLE + programLoaded + cover open BEFORE start */
+            if (state == ST_IDLE && programLoaded) {
+                overlayState = OV_CHUCK_COVER_OPENED;  /* LED_COVER_FAST + CycleStart not allowed */
+            } else {
+                overlayState = OV_NONE;                /* all other scenarios like before */
+            }
         }
     }
 
@@ -204,6 +207,14 @@ FUNCTION(_)
             /* If we didn’t engage because we weren’t running, nothing to resume */
             overlayState              = OV_NONE;
         }
+    }
+
+    /* ===== Overlay bootstrap when cover is already open at load =====
+       Dacă nu am avut „rise” (cover era deja 1) și suntem în IDLE cu program încărcat,
+       forțăm overlay-ul pentru LED_COVER_FAST și blocarea CycleStart. */
+    if (overlayState == OV_NONE && chuckCoverLevel && programLoaded && state == ST_IDLE) {
+        overlayState = OV_CHUCK_COVER_OPENED;   /* fără feed/spindle inhibit */
+        prevStateBeforeCover = ST_IDLE;
     }
 
 
