@@ -209,6 +209,11 @@ FUNCTION(_)
         }
     }
 
+    if (!programLoaded) {
+        overlayState = OV_NONE;
+        spindleUninhibitCommanded = false;
+    }
+
     /* ===== Overlay bootstrap when cover is already open at load =====
        Dacă nu am avut „rise” (cover era deja 1) și suntem în IDLE cu program încărcat,
        forțăm overlay-ul pentru LED_COVER_FAST și blocarea CycleStart. */
@@ -441,7 +446,9 @@ FUNCTION(_)
 
     /* ===== LED state machine ===== */
     /* Choose LED mode from overlay first (priority), otherwise base state */
-    if (overlayState == OV_CHUCK_COVER_OPENED) {
+    if (!programLoaded) {
+        led_mode = LED_OFF;
+    } else if (overlayState == OV_CHUCK_COVER_OPENED) {
         led_mode = LED_COVER_FAST;              /* 100/100 */
     } else if (overlayState == OV_SPINDLE_RESUME_REQ || overlayState == OV_FEED_RESUME_REQ) {
         led_mode = LED_PAUSED_BLINK;            /* 500/500 */
