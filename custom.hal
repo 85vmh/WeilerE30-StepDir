@@ -35,12 +35,13 @@ net prg.pause       program-state.0.pauseProgram    =>  halui.program.pause
 net prg.resume      program-state.0.resumeProgram   =>  halui.program.resume
 net prg.step        program-state.0.stepProgram     =>  halui.program.step
 net prg.stop        program-state.0.stopProgram     =>  halui.program.stop
-net prg.unload      program-state.0.unloadProgram   =>  halui.mode.manual     
+net prg.finished    program-state.0.finishedProgram =>  halui.mode.manual     
 net prg.fIhibit     program-state.0.feedInhibit     =>  motion.feed-hold
 net prg.sInhibit    program-state.0.spindleInhibit  =>  or.sp-inhibit.in0
 net ldr.sInhibit    classicladder.0.out-06          =>  or.sp-inhibit.in1
 net out.sInhibit    or.sp-inhibit.out               =>  spindle.0.inhibit   => not.sp-inhibit.in
 
+# enable the spindle when enable is requested and inhibit not active (chuck cover opened)
 net sp.no-inhibit   not.sp-inhibit.out      =>  and.sp-enable.in1
 net sp.enable       and.sp-enable.out       =>  hm2_7i95.0.pwmgen.00.enable => hm2_[MESA](BOARD).0.ssr.00.out-05
 

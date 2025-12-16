@@ -109,10 +109,8 @@ net and.should-orient   =>  mux.value-switch.sel #this will toggle beween the sp
 net and.should-orient   =>  mux.off-delay.sel #this will toggle between the off delay times
 net and.should-orient   =>  oneshot.0.in #this will trigger the index-enable
 
-# Velocity PID is enabled only when not orient
+# We need an extra condition to enable the spindle JUST when spindle inhibit is not active
 net sp-enable0          or.sp-enable.out    and.sp-enable.in0
-# net sp-enable1          spindle.0.inhibit   and.sp-enable.in1
-#net sp.enable           and.sp-enable.out    =>  hm2_7i95.0.pwmgen.00.enable => hm2_[MESA](BOARD).0.ssr.00.out-05
 
 #---------------------
 net sp.vel-fb-rpm   <=  hm2_7i95.0.encoder.05.velocity-rpm  # required for UI

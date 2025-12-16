@@ -1,6 +1,6 @@
 # Halshow settings
 # This file is generated automatically.
-wm geometry . 965x856+18+73
+wm geometry . 714x856+775+27
 placeFrames 0.3163716814159292
 set ::ratio 0.3163716814159292
 set ::old_w_leftf 234
@@ -21,9 +21,21 @@ set ::watchlist {
     pin+hm2_7i95.0.pwmgen.00.enable
     pin+hm2_7i95.0.pwmgen.00.value
     pin+spindle.0.inhibit
-    pin+hm2_7i95.0.ssr.00.out-02
     pin+halui.mode.manual
-    pin+program-state.0.unloadProgram
+    pin+program-state.0.finishedProgram
+    sig+prg.sInhibit
+    sig+ldr.sInhibit
+    pin+manual-weiler.0.spindleOn
+    pin+halui.spindle.0.is-on
+    pin+program-state.0.chuckCoverOpened
+    pin+spindle-lubrication.0.forceOn
+    pin+spindle-lubrication.0.lubricate
+    pin+spindle-lubrication.0.machineOn
+    pin+spindle-lubrication.0.offTime
+    pin+spindle-lubrication.0.onTime
+    pin+spindle-lubrication.0.secondsTillOff
+    pin+spindle-lubrication.0.secondsTillOn
+    pin+spindle-lubrication.0.time
 }
 set ::workmode watchhal
 set ::watchInterval 10
