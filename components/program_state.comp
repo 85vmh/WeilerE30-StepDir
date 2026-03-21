@@ -102,6 +102,7 @@ static bool pendingFinishedAfterStop   = false;   /* after Stop: when we see IDL
 static bool firstStepAfterEnterSB      = false;   /* first GREEN in ST_PAUSED_SINGLE_BLOCK must STEP */
 
 static int  prevState                  = ST_UNKNOWN;
+static bool firstCall                  = true;
 
 /* Overlay machinery */
 static int  overlayState               = OV_NONE;
@@ -164,6 +165,12 @@ FUNCTION(_)
     bool singleBlockLevel   = singleBlock;
     bool chuckCoverLevel    = chuckCoverOpened;
     bool programIdleLevel   = programIdle;
+
+    /* On first call, sync prev states to avoid false edges at startup */
+    if (firstCall) {
+        prevChuckCoverLevel = chuckCoverLevel;
+        firstCall = false;
+    }
     
     bool programIdleRise    = ( programIdleLevel && !prevProgramIdleLevel );
     bool cycleStartEdge     = ( cycleStartLevel  && !prevCycleStartLevel );
