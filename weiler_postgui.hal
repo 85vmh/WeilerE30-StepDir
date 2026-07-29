@@ -26,7 +26,8 @@ setp                        manual-weiler.0.startFeedDelay      1   # 1 second
 net app.jog-speed           manual-weiler.0.jogRapidSpeed
 
 # input pins
-net sp.is-running       =>  manual-weiler.0.spindleOn   =>  classicladder.0.in-18
+net sp.is-running       =>  manual-weiler.0.spindleOn   =>classicladder.0.in-18 => TeachInLathe.spindle.is-on
+net sp.angle            =>  TeachInLathe.spindle.orientation
 net sp.vel-fb-rpm       =>  manual-weiler.0.spindleRpm
 net app.feed-per-rev    =>  manual-weiler.0.feedPerRev
 net mw.override-value   =>  halui.feed-override.value   =>  manual-weiler.0.feedOverride
@@ -45,6 +46,7 @@ net jog-x-neg           <=  manual-weiler.0.jogXMinus
 net jog-x-pos           <=  manual-weiler.0.jogXPlus
 net jog-z-neg           <=  manual-weiler.0.jogZMinus
 net jog-z-pos           <=  manual-weiler.0.jogZPlus
+net mw.feeding          =>  manual-weiler.0.feeding     =>  TeachInLathe.joystick.is-feeding     
 
 net mpg.readable-increment  TeachInLathe.handwheels.jog-increment
 # Enable MPG's if they are enabled in the UI

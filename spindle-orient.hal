@@ -8,6 +8,7 @@ loadrt  orient          names=orient
 loadrt  timedelay       names=timedelay.enable
 loadrt  tristate_bit    count=1
 loadrt  oneshot         count=1
+loadrt  spindle_angle   names=sp-angle
 
 addf    limit.speed     		servo-thread	
 addf    mux.gearbox             servo-thread
@@ -18,6 +19,7 @@ addf    near.at-speed           servo-thread
 addf    timedelay.enable        servo-thread
 addf    tristate-bit.0          servo-thread
 addf    oneshot.0               servo-thread
+addf    sp-angle                servo-thread
 #forum says that the order matters here
 addf    orient                  servo-thread 
 addf    pid.o.do-pid-calcs      servo-thread
@@ -135,6 +137,12 @@ net sp.revs <=  hm2_7i95.0.encoder.05.position
 net sp.revs =>  spindle.0.revs   
 net sp.revs =>  pid.o.feedback 
 net sp.revs =>  orient.position
+net sp.revs =>  sp-angle.position
+
+# Spindle angle display (fractional part of the index-referenced encoder position)
+setp    sp-angle.offset     0
+net spindle-sync    =>  sp-angle.index-enable
+net sp.angle        <=  sp-angle.angle
 
 #Switch between velocity command and pid.o (speed and orient)
 net sp.vel-cmd      limit.speed.out         =>  mux.value-switch.in0 

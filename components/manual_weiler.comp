@@ -24,6 +24,7 @@ pin out bit   jogZPlus;
 pin out float jogSpeed;         // NOTE: FEED outputs mm/min; JOG uses jogRapidSpeed as-is
 pin out bit   allowMpg;
 pin out bit   resetRequired;    // 1 when ST_RESET_REQUIRED
+pin out bit   feeding;          // 1 when ST_FEEDING_PENDING or ST_FEEDING_ACTIVE
 
 /* ===== Debug ===== */
 param rw s32 state_dbg;         // 0=NONE, 1=FEEDING_PENDING, 2=FEEDING_ACTIVE, 3=JOGGING, 4=RESET_REQUIRED
@@ -88,6 +89,8 @@ FUNCTION(_)
         jogZMinus = o_zminus; jogZPlus  = o_zplus;
         jogSpeed  = o_speed;  allowMpg  = o_allowMpg;
         resetRequired = o_resetReq;
+        /* RESET_REQUIRED can only exit to JOGGING or NONE, never to a feed state */
+        feeding = 0;
         return;
     }
 
@@ -203,6 +206,9 @@ FUNCTION(_)
     jogXMinus = o_xminus; jogXPlus  = o_xplus;
     jogZMinus = o_zminus; jogZPlus  = o_zplus;
     jogSpeed  = o_speed;  allowMpg  = o_allowMpg;
+
+    /* derived from the post-transition state, same as the jog outputs above */
+    feeding = (state == ST_FEEDING_PENDING || state == ST_FEEDING_ACTIVE);
 
     /* debug pin */
     state_dbg = state;
