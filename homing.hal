@@ -30,3 +30,30 @@ net z-is-homed          =>  classicladder.0.in-17
 net out.home-x          classicladder.0.out-03  =>  halui.joint.0.home
 net out.home-z          classicladder.0.out-04  =>  halui.joint.1.home
 net out.home-inhibit    classicladder.0.out-05  =>  halui.abort
+
+
+#**************************
+# weiler_homing component (replacement for the ClassicLadder Homing rungs)
+#
+# To switch over: comment out the three "net out.home-*" lines above (they are
+# the only ClassicLadder outputs used by homing) and uncomment this block.
+# Leave the classicladder.0.in-* nets above in place - in-02 and the joystick
+# inputs are still read by the other ladder sections.
+#**************************
+
+#loadrt weiler_homing
+#addf weiler-homing.0 servo-thread
+
+#setp weiler-homing.0.abort-pulse-duration       0.10
+#setp weiler-homing.0.axes-homed-pulse-duration  0.10
+
+#net machine-is-on       =>  weiler-homing.0.machine-on
+#net in.joystick-x-plus  =>  weiler-homing.0.joystick-x
+#net in.joystick-z-plus  =>  weiler-homing.0.joystick-z
+#net x-is-homed          =>  weiler-homing.0.x-homed
+#net z-is-homed          =>  weiler-homing.0.z-homed
+
+#net out.home-x          weiler-homing.0.home-x        =>  halui.joint.0.home
+#net out.home-z          weiler-homing.0.home-z        =>  halui.joint.1.home
+#net out.home-inhibit    weiler-homing.0.abort-homing  =>  halui.abort
+#net hom.axes-homed      weiler-homing.0.axes-homed
