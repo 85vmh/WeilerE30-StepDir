@@ -26,7 +26,7 @@ setp                        manual-weiler.0.startFeedDelay      1   # 1 second
 net app.jog-speed           manual-weiler.0.jogRapidSpeed
 
 # input pins
-net sp.is-running       =>  manual-weiler.0.spindleOn   =>classicladder.0.in-18 => TeachInLathe.spindle.is-on
+net sp.is-running       =>  manual-weiler.0.spindleOn   => classicladder.0.in-18 => TeachInLathe.spindle.is-on
 net sp.angle            =>  TeachInLathe.spindle.orientation
 net sp.vel-fb-rpm       =>  manual-weiler.0.spindleRpm
 net app.feed-per-rev    =>  manual-weiler.0.feedPerRev
@@ -72,3 +72,4 @@ net zmin TeachInLathe.axis-limits.z-min   => ini.z.min_limit
 net zmax TeachInLathe.axis-limits.z-max   => ini.z.max_limit
 
 net app.program-loaded      program-state.0.programLoaded
+net out.cycle-start-led     =>  TeachInLathe.app-status.cycle-start-led
