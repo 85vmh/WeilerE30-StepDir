@@ -71,5 +71,8 @@ net xmax TeachInLathe.axis-limits.x-max   => ini.x.max_limit
 net zmin TeachInLathe.axis-limits.z-min   => ini.z.min_limit
 net zmax TeachInLathe.axis-limits.z-max   => ini.z.max_limit
 
+net sp.reset-required       TeachInLathe.spindle.reset-required
+net js.reset-required       manual-weiler.0.resetRequired   => TeachInLathe.joystick.reset-required
+
 net app.program-loaded      program-state.0.programLoaded
 net out.cycle-start-led     =>  TeachInLathe.app-status.cycle-start-led
