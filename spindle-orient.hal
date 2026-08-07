@@ -159,7 +159,7 @@ net sp.at-speed     and.on-at-speed.out                 => spindle.0.at-speed
 net spindir spindle.0.forward   =>  hm2_7i95.0.gpio.009.out
 
 #Spindle cover safety mechanism
-net in.chuck-cover      =>  classicladder.0.in-12   
-net in.requested-fwd    halui.spindle.0.runs-forward    =>  classicladder.0.in-09 
-net in.spindle-neutral                                  =>  classicladder.0.in-10
-net in.requested-rev    halui.spindle.0.runs-backward   =>  classicladder.0.in-11
+# net in.chuck-cover      =>  classicladder.0.in-12   
+# net in.requested-fwd    halui.spindle.0.runs-forward    =>  classicladder.0.in-09 
+# net in.spindle-neutral                                  =>  classicladder.0.in-10
+# net in.requested-rev    halui.spindle.0.runs-backward   =>  classicladder.0.in-11

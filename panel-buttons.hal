@@ -8,7 +8,7 @@ setp weiler-startup.0.powered-on-debounce    30
 setp weiler-startup.0.output-pulse-duration  0.10
 
 #Power & Estop
-net in.estop-free       => classicladder.0.in-00    iocontrol.0.emc-enable-in
+net in.estop-free       =>  iocontrol.0.emc-enable-in
 
 net machine-is-on       =>  weiler-startup.0.machine-on
 net in.enable-drives    =>  weiler-startup.0.powered-on

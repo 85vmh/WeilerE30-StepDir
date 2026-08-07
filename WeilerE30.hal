@@ -13,14 +13,10 @@ setp    hm2_[MESA](BOARD).0.watchdog.timeout_ns 5000000
 loadrt  pid     names=pid.x,pid.z,pid.s,pid.o
 loadrt  mux16   names=mux.spindle-override,mux.feed-override,mux.rapid-override
 
-
-loadrt  classicladder_rt numPhysInputs=[PLC](HAL_INPUTS) numPhysOutputs=[PLC](HAL_OUTPUTS) numTimersIec=[PLC](TIMERS)
-loadusr classicladder --nogui WeilerESeries.clp
 loadusr -W hal_manualtoolchange
 
 # THREADS
 addf    hm2_[MESA](BOARD).0.read    servo-thread
-addf    classicladder.0.refresh     servo-thread
 addf    motion-command-handler      servo-thread
 addf    motion-controller           servo-thread
 addf    pid.x.do-pid-calcs          servo-thread
@@ -172,7 +168,3 @@ net tool:changed    hal_manualtoolchange.changed    =>  iocontrol.0.tool-changed
 net tool:number     iocontrol.0.tool-prep-number    =>  hal_manualtoolchange.number
 #  ---ignore tool prepare requests---
 net tool:prepare    iocontrol.0.tool-prepare        =>  iocontrol.0.tool-prepared
-
-
-# initial lube condition, only when machine is enabled
-#net out.lube-pump <= halui.machine.is-on

@@ -2,18 +2,17 @@
 
 loadrt  program_state
 loadrt  debounce            cfg=2
+loadrt  weiler_spindle
 
 addf    program-state.0     servo-thread
 addf    debounce.0          servo-thread
+addf    weiler-spindle.0    servo-thread
+
 setp    debounce.0.delay    30
 
 # for the pulsed outputs, set the duration of the pulse in seconds
 setp    program-state.0.outputPulseDuration     0.15
-
-
-net in.manual-mode      halui.mode.is-manual    =>  classicladder.0.in-13
-net in.mdi-mode         halui.mode.is-mdi       =>  classicladder.0.in-14
-net in.is-auto-mode     halui.mode.is-auto      =>  classicladder.0.in-15
+setp    weiler-spindle.0.outputPulseDuration    0.10
 
 
 net in.cycle-start  =>  debounce.0.0.in
@@ -38,7 +37,6 @@ net prg.stop        program-state.0.stopProgram     =>  halui.program.stop
 net prg.finished    program-state.0.finishedProgram =>  halui.mode.manual     
 net prg.fIhibit     program-state.0.feedInhibit     =>  motion.feed-hold
 net prg.sInhibit    program-state.0.spindleInhibit  =>  or.sp-inhibit.in0
-net ldr.sInhibit    classicladder.0.out-06          =>  or.sp-inhibit.in1
 net out.sInhibit    or.sp-inhibit.out               =>  spindle.0.inhibit   => not.sp-inhibit.in
 
 # enable the spindle when enable is requested and inhibit not active (chuck cover opened)
@@ -49,38 +47,14 @@ net sp.enable       and.sp-enable.out       =>  hm2_7i95.0.pwmgen.00.enable => h
 net opt-stop    halui.program.optional-stop.is-on   =>  motion.digital-in-00  
 net sp.at-speed                                     =>  motion.digital-in-01
 
-net out.sp-stop         classicladder.0.out-07      =>  halui.spindle.0.stop
-
 net out.cycle-start-led     <=  program-state.0.cycleStartLedStatus
 
+net machine-is-on      =>  weiler-spindle.0.machineOn
+net sp.is-running      =>  weiler-spindle.0.spindleOn
+net in.spindle-neutral =>  weiler-spindle.0.spindleNeutral
+net in.chuck-cover     =>  weiler-spindle.0.spindleCoverOpened
+net in.is-auto-mode    =>  weiler-spindle.0.isAutoMode
 
-#**************************
-# weiler_spindle component (replacement for the ClassicLadder Spindle rungs)
-#
-# Chuck cover safety in MANUAL/MDI mode. The AUTO case stays with program_state:
-# its spindleInhibit feeds or.sp-inhibit.in0 and is not touched here.
-#
-# To switch over, comment out the two ClassicLadder lines above:
-#   - net ldr.sInhibit  classicladder.0.out-06  =>  or.sp-inhibit.in1
-#   - net out.sp-stop   classicladder.0.out-07  =>  halui.spindle.0.stop
-# then uncomment this block.
-#
-# Leave in place: the "net in.* => classicladder.0.in-*" lines above and in
-# homing.hal / spindle-orient.hal / weiler_postgui.hal - %I2, %I10, %I12, %I15
-# and %I18 are still read by the other ladder sections.
-#**************************
-
-#loadrt weiler_spindle
-#addf weiler-spindle.0 servo-thread
-
-#setp weiler-spindle.0.outputPulseDuration 0.10
-
-#net machine-is-on      =>  weiler-spindle.0.machineOn
-#net sp.is-running      =>  weiler-spindle.0.spindleOn
-#net in.spindle-neutral =>  weiler-spindle.0.spindleNeutral
-#net in.chuck-cover     =>  weiler-spindle.0.spindleCoverOpened
-#net in.is-auto-mode    =>  weiler-spindle.0.isAutoMode
-
-#net ldr.sInhibit       weiler-spindle.0.spindleInhibit  =>  or.sp-inhibit.in1
-#net out.sp-stop        weiler-spindle.0.spindleStop     =>  halui.spindle.0.stop
-#net sp.reset-required  <=  weiler-spindle.0.statusSpindleResetRequired
+net man.sInhibit       weiler-spindle.0.spindleInhibit  =>  or.sp-inhibit.in1
+net out.sp-stop        weiler-spindle.0.spindleStop     =>  halui.spindle.0.stop
+net sp.reset-required  <=  weiler-spindle.0.statusSpindleResetRequired
