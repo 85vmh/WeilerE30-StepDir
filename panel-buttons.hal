@@ -1,41 +1,22 @@
 #**************************
 #Panel buttons
 #**************************
+loadrt weiler_startup
+addf weiler-startup.0 servo-thread
+
+setp weiler-startup.0.powered-on-debounce    30
+setp weiler-startup.0.output-pulse-duration  0.10
 
 #Power & Estop
 net in.estop-free       => classicladder.0.in-00    iocontrol.0.emc-enable-in
-net in.enable-drives    => classicladder.0.in-01
-net out.machine-on      classicladder.0.out-01  =>  halui.machine.on
-net out.machine-off     classicladder.0.out-02  =>  halui.machine.off
 
+net machine-is-on       =>  weiler-startup.0.machine-on
+net in.enable-drives    =>  weiler-startup.0.powered-on
+net in.joystick-neutral =>  weiler-startup.0.joystick-neutral
+net in.spindle-neutral  =>  weiler-startup.0.spindle-neutral
 
-#**************************
-# weiler_startup component (replacement for the ClassicLadder OnOff rungs)
-#
-# To switch over, comment out:
-#   - the two "net out.machine-*" lines above (classicladder.0.out-01 / out-02)
-#   - custom.hal: net out.nc-ready <= classicladder.0.out-00
-# then uncomment this block.
-#
-# Leave in place: "net in.enable-drives => classicladder.0.in-01" above and
-# "net machine-is-on => classicladder.0.in-02" in homing.hal - %I1 and %I2 are
-# still read by the other ladder sections.
-#
-# powered-on-debounce is in thread samples, like debounce.N.delay:
-# 30 samples = 15 ms at SERVO_PERIOD 500000 (the ladder used a 100 ms TON).
-#**************************
+# Allow the machine to be powered on when the conditions are met (joystick neutral & spindle neutral)
+net out.nc-ready        <=  weiler-startup.0.nc-ready
 
-#loadrt weiler_startup
-#addf weiler-startup.0 servo-thread
-
-#setp weiler-startup.0.powered-on-debounce    30
-#setp weiler-startup.0.output-pulse-duration  0.10
-
-#net machine-is-on       =>  weiler-startup.0.machine-on
-#net in.enable-drives    =>  weiler-startup.0.powered-on
-#net in.joystick-neutral =>  weiler-startup.0.joystick-neutral
-#net in.spindle-neutral  =>  weiler-startup.0.spindle-neutral
-
-#net out.nc-ready        <=  weiler-startup.0.nc-ready
-#net out.machine-on      weiler-startup.0.turn-on   =>  halui.machine.on
-#net out.machine-off     weiler-startup.0.turn-off  =>  halui.machine.off
+net out.machine-on      weiler-startup.0.turn-on   =>  halui.machine.on
+net out.machine-off     weiler-startup.0.turn-off  =>  halui.machine.off

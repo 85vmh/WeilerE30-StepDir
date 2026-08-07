@@ -51,7 +51,4 @@ net sp.at-speed                                     =>  motion.digital-in-01
 
 net out.sp-stop         classicladder.0.out-07      =>  halui.spindle.0.stop
 
-
-# Allow the machine to be powered on when the conditions are met (joystick neutral & spindle neutral)
-net out.nc-ready            <=  classicladder.0.out-00
 net out.cycle-start-led     <=  program-state.0.cycleStartLedStatus

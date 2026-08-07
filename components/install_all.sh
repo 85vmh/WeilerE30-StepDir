@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Path to halcompile. Override with: ./install_all.sh /path/to/halcompile.sh
-HALCOMPILE="${1:-halcompile}"
+HALCOMPILE="${1:-/home/cnc/linuxcnc_custom/bin/halcompile}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
