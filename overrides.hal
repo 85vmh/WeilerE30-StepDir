@@ -61,4 +61,10 @@ setp halui.feed-override.count-enable 1
 setp halui.feed-override.direct-value 1
 setp halui.feed-override.scale 0.01
 
-net out.feed-override  mux.feed-override.out-s  =>  halui.feed-override.counts
+setp halui.rapid-override.count-enable 1
+setp halui.rapid-override.direct-value 1
+setp halui.rapid-override.scale 0.01
+
+net out.feed-override   <= mux.feed-override.out-s 
+net out.feed-override   =>  halui.feed-override.counts
+net out.feed-override   =>  halui.rapid-override.counts
