@@ -1,6 +1,6 @@
 # These are the the connections made after the UI was launched and custom pins were created
-loadrt  manual_weiler
-addf    manual-weiler.0     servo-thread
+loadrt  weiler_manual_mode
+addf    weiler-manual-mode.0     servo-thread
 
 
 net in.spindle-rev          TeachInLathe.spindle.switch-rev-in
@@ -21,32 +21,32 @@ net app.program-loaded      TeachInLathe.app-status.program-loaded
 
 
 # hardcoded parameters
-setp                        manual-weiler.0.allowMpgDelay       0.5 # 0.5 second
-setp                        manual-weiler.0.startFeedDelay      1   # 1 second
-net app.jog-speed           manual-weiler.0.jogRapidSpeed
+setp                        weiler-manual-mode.0.allowMpgDelay       0.5 # 0.5 second
+setp                        weiler-manual-mode.0.startFeedDelay      1   # 1 second
+net app.jog-speed           weiler-manual-mode.0.jogRapidSpeed
 
 # input pins
-net sp.is-running       =>  manual-weiler.0.spindleOn   => TeachInLathe.spindle.is-on
+net sp.is-running       =>  weiler-manual-mode.0.spindleOn   => TeachInLathe.spindle.is-on
 net sp.angle            =>  TeachInLathe.spindle.orientation
-net sp.vel-fb-rpm       =>  manual-weiler.0.spindleRpm
-net app.feed-per-rev    =>  manual-weiler.0.feedPerRev
-net mw.override-value   =>  halui.feed-override.value   =>  manual-weiler.0.feedOverride
+net sp.vel-fb-rpm       =>  weiler-manual-mode.0.spindleRpm
+net app.feed-per-rev    =>  weiler-manual-mode.0.feedPerRev
+net mw.override-value   =>  halui.feed-override.value   =>  weiler-manual-mode.0.feedOverride
 
-net in.joystick-neutral     manual-weiler.0.joystickNeutral
-net in.joystick-x-plus      manual-weiler.0.joystickXPlus   
-net in.joystick-x-minus     manual-weiler.0.joystickXMinus  
-net in.joystick-z-plus      manual-weiler.0.joystickZPlus    
-net in.joystick-z-minus     manual-weiler.0.joystickZMinus
-net in.joystick-rapid       manual-weiler.0.joystickRapid
-net app.is-angle-feed       manual-weiler.0.angleFeed
+net in.joystick-neutral     weiler-manual-mode.0.joystickNeutral
+net in.joystick-x-plus      weiler-manual-mode.0.joystickXPlus   
+net in.joystick-x-minus     weiler-manual-mode.0.joystickXMinus  
+net in.joystick-z-plus      weiler-manual-mode.0.joystickZPlus    
+net in.joystick-z-minus     weiler-manual-mode.0.joystickZMinus
+net in.joystick-rapid       weiler-manual-mode.0.joystickRapid
+net app.is-angle-feed       weiler-manual-mode.0.angleFeed
 
 # outputs
-net mw.out-jog-speed    =>  manual-weiler.0.jogSpeed    =>  halui.axis.jog-speed
-net jog-x-neg           <=  manual-weiler.0.jogXMinus
-net jog-x-pos           <=  manual-weiler.0.jogXPlus
-net jog-z-neg           <=  manual-weiler.0.jogZMinus
-net jog-z-pos           <=  manual-weiler.0.jogZPlus
-net mw.feeding          =>  manual-weiler.0.feeding     =>  TeachInLathe.joystick.is-feeding     
+net mw.out-jog-speed    =>  weiler-manual-mode.0.jogSpeed    =>  halui.axis.jog-speed
+net jog-x-neg           <=  weiler-manual-mode.0.jogXMinus
+net jog-x-pos           <=  weiler-manual-mode.0.jogXPlus
+net jog-z-neg           <=  weiler-manual-mode.0.jogZMinus
+net jog-z-pos           <=  weiler-manual-mode.0.jogZPlus
+net mw.feeding          =>  weiler-manual-mode.0.feeding     =>  TeachInLathe.joystick.is-feeding     
 
 net mpg.readable-increment  TeachInLathe.handwheels.jog-increment
 # Enable MPG's if they are enabled in the UI
@@ -54,7 +54,7 @@ net mpg.app-x-enable        TeachInLathe.handwheels.x-enable    =>  and.x-mpg-en
 net mpg.app-z-enable        TeachInLathe.handwheels.z-enable    =>  and.z-mpg-enable.in0
 
 # 
-net mpg.jog-allowed         <=  manual-weiler.0.allowMpg
+net mpg.jog-allowed         <=  weiler-manual-mode.0.allowMpg
 net mpg.jog-allowed         =>  and.x-mpg-enable.in1
 net mpg.jog-allowed         =>  and.z-mpg-enable.in1
 net mpg.jog-allowed         =>  TeachInLathe.handwheels.allowed
@@ -72,7 +72,7 @@ net zmin TeachInLathe.axis-limits.z-min   => ini.z.min_limit
 net zmax TeachInLathe.axis-limits.z-max   => ini.z.max_limit
 
 net sp.reset-required       TeachInLathe.spindle.reset-required
-net js.reset-required       manual-weiler.0.resetRequired   => TeachInLathe.joystick.reset-required
+net js.reset-required       weiler-manual-mode.0.resetRequired   => TeachInLathe.joystick.reset-required
 
 net app.program-loaded      program-state.0.programLoaded
 net out.cycle-start-led     =>  TeachInLathe.app-status.cycle-start-led

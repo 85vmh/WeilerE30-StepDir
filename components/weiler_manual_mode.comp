@@ -1,4 +1,4 @@
-component manual_weiler "Realtime joystick/feed state machine for Weiler lathe with reset-required & angle feed";
+component weiler_manual_mode "Realtime joystick/feed state machine for Weiler lathe with reset-required & angle feed";
 
 /* ===== Inputs ===== */
 pin in  bit   spindleOn;
