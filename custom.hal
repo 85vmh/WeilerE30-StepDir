@@ -27,6 +27,7 @@ net sp.at-speed                                     =>  program-state.0.spindleA
 net prg.prgIdle         halui.program.is-idle       =>  program-state.0.programIdle
 net prg.running         halui.program.is-running    =>  program-state.0.programRunning
 net prg.paused          halui.program.is-paused     =>  program-state.0.programPaused
+net machine-is-on                                   =>  program-state.0.machineOn
 
 # set the outputs for the custom program_state component
 net prg.run         program-state.0.startProgram    =>  halui.program.run      =>   halui.mode.auto
@@ -34,7 +35,9 @@ net prg.pause       program-state.0.pauseProgram    =>  halui.program.pause
 net prg.resume      program-state.0.resumeProgram   =>  halui.program.resume
 net prg.step        program-state.0.stepProgram     =>  halui.program.step
 net prg.stop        program-state.0.stopProgram     =>  halui.program.stop
-net prg.finished    program-state.0.finishedProgram =>  halui.mode.manual     
+# only the abort switches back to manual mode; programCompleted is a level for the UI
+net prg.completed   program-state.0.programCompleted
+net prg.aborted     program-state.0.programAborted   =>  halui.mode.manual
 net prg.fIhibit     program-state.0.feedInhibit     =>  motion.feed-hold
 net prg.sInhibit    program-state.0.spindleInhibit  =>  or.sp-inhibit.in0
 net out.sInhibit    or.sp-inhibit.out               =>  spindle.0.inhibit   => not.sp-inhibit.in

@@ -19,6 +19,9 @@ pin in  bit   spindleAtSpeed;       /* 1 = spindle at commanded speed */
 /* Tool change handshake */
 pin in  bit   toolChange;           /* <- iocontrol.0.tool-change */
 
+/* Machine power: falling edge while a program is active = abort (e-stop, machine off) */
+pin in  bit   machineOn;            /* <- halui.machine.is-on */
+
 /* Pulse duration (seconds; 0.1 = 100ms) for all command pulses */
 pin in  float outputPulseDuration = 0.10;
 
@@ -28,7 +31,8 @@ pin out bit   pauseProgram;         /* -> halui.program.pause  (pulse) */
 pin out bit   resumeProgram;        /* -> halui.program.resume (pulse) */
 pin out bit   stepProgram;          /* -> halui.program.step   (pulse) */
 pin out bit   stopProgram;          /* -> halui.program.stop   (pulse) */
-pin out bit   finishedProgram;      /* -> halui.mode.manual    (pulse) */
+pin out bit   programCompleted;     /* program ended normally (M2/M30)      (level, for the UI) */
+pin out bit   programAborted;       /* program stopped by red button/e-stop (pulse) */
 pin out bit   toolChanged;          /* -> iocontrol.0.tool-changed (pulse) */
 
 /* Feed-hold + Spindle inhibit (levels) */
@@ -54,7 +58,7 @@ pin out bit   cycleStartLedStatus;          /* RUNNING=ON; PAUSED=blink 500/500;
 /* ===== Debug ===== */
 param rw s32  state_dbg;                    /* base state: 0=NOT_LOADED,1=IDLE,2=RUNNING,3=PAUSED_NO_SB,4=PAUSED_SB,5=UNKNOWN */
 param rw bit  postStartPausePending_dbg;    /* armed pause after Start in SB */
-param rw s32  last_action_dbg;              /* 1=start,2=pause,3=resume,4=step,5=stop,7=hold_on,8=hold_off,9=tool_changed */
+param rw s32  last_action_dbg;              /* 1=start,2=pause,3=resume,4=step,5=stop,6=completed,7=hold_on,8=hold_off,9=tool_changed,10=aborted */
 param rw bit  toolChangeAckSent_dbg;        /* tool change already confirmed for the current request */
 param rw s32  overlay_dbg;                  /* 0=NONE, 1=COVER_OPEN, 2=SPINDLE_RESUME_REQ, 3=FEED_RESUME_REQ */
 
@@ -103,10 +107,12 @@ static bool prevSingleBlockLevel       = false;
 static bool prevChuckCoverLevel        = false;
 static bool prevProgramIdleLevel       = false;
 static bool prevToolChangeLevel        = false;
+static bool prevMachineOnLevel         = false;
 
 static bool postStartPausePending      = false;   /* after Start with SB=ON, pause when RUNNING appears */
 static bool feedHoldLatched            = false;   /* mirror of the feedInhibit we drive */
-static bool pendingFinishedAfterStop   = false;   /* after Stop: when we see IDLE, pulse finishedProgram once */
+static bool pendingAbortedAfterStop    = false;   /* after Stop: when we see IDLE, pulse programAborted once */
+static bool programWasActive           = false;   /* program ran (or was paused) since it last went IDLE */
 static bool firstStepAfterEnterSB      = false;   /* first GREEN in ST_PAUSED_SINGLE_BLOCK must STEP */
 static bool toolChangeAckSent          = false;   /* already pulsed toolChanged for the current request */
 
@@ -124,7 +130,7 @@ static double t_pause       = 0.0;
 static double t_resume      = 0.0;
 static double t_step        = 0.0;
 static double t_stop        = 0.0;
-static double t_finished    = 0.0;
+static double t_aborted     = 0.0;
 static double t_toolChanged = 0.0;
 
 /* ===== LED state ===== */
@@ -161,7 +167,7 @@ FUNCTION(_)
 
     state_dbg = state;
 
-    /* Arm „first step” when entering ST_PAUSED_SINGLE_BLOCK */
+    /* Arm "first step" when entering ST_PAUSED_SINGLE_BLOCK */
     if ((state == ST_PAUSED_SINGLE_BLOCK) && (prevState != ST_PAUSED_SINGLE_BLOCK)) {
         firstStepAfterEnterSB = true;
     }
@@ -176,11 +182,13 @@ FUNCTION(_)
     bool chuckCoverLevel    = chuckCoverOpened;
     bool programIdleLevel   = programIdle;
     bool toolChangeLevel    = toolChange;
+    bool machineOnLevel     = machineOn;
 
     /* On first call, sync prev states to avoid false edges at startup */
     if (firstCall) {
         prevChuckCoverLevel = chuckCoverLevel;
         prevToolChangeLevel = toolChangeLevel;
+        prevMachineOnLevel  = machineOnLevel;
         firstCall = false;
     }
 
@@ -193,6 +201,7 @@ FUNCTION(_)
     bool chuckCoverFall     = ( !chuckCoverLevel && prevChuckCoverLevel );
     bool toolChangeRise     = ( toolChangeLevel && !prevToolChangeLevel );
     bool toolChangeFall     = ( !toolChangeLevel && prevToolChangeLevel );
+    bool machineOnFall      = ( !machineOnLevel && prevMachineOnLevel );
 
     /* ===== Tool change guard =====
        While the interpreter waits for a tool change, GREEN confirms the change and
@@ -244,16 +253,19 @@ FUNCTION(_)
         spindleUninhibitCommanded = false;
 
         /* nothing may survive a program unload / reload */
+        programWasActive        = false;
+        pendingAbortedAfterStop = false;
+        programCompleted        = 0;
         toolChangeAckSent = false;
         toolChanged       = 0;
         t_toolChanged     = 0.0;
     }
 
     /* ===== Overlay bootstrap when cover is already open at load =====
-       Dacă nu am avut „rise” (cover era deja 1) și suntem în IDLE cu program încărcat,
-       forțăm overlay-ul pentru LED_COVER_FAST și blocarea CycleStart. */
+       If there was no rise (cover was already 1) and we are IDLE with a program loaded,
+       force the overlay for LED_COVER_FAST and to block CycleStart. */
     if (overlayState == OV_NONE && chuckCoverLevel && programLoaded && state == ST_IDLE) {
-        overlayState = OV_CHUCK_COVER_OPENED;   /* fără feed/spindle inhibit */
+        overlayState = OV_CHUCK_COVER_OPENED;   /* without feed/spindle inhibit */
         prevStateBeforeCover = ST_IDLE;
     }
 
@@ -305,16 +317,42 @@ FUNCTION(_)
 
     postStartPausePending_dbg = postStartPausePending;
 
-    /* ===== Finished after Stop (base) =====
-       Dacă nu eram IDLE la STOP, pulsează la primul 0->1 pe programIdle.
-       Dacă între timp se apasă CycleStart, anulăm pending-ul. */
-    if (pendingFinishedAfterStop && programIdleRise) {
-        pulse_output_pin(&t_finished, &finishedProgram, outputPulseDuration);
-        last_action_dbg            = 6; /* finished */
-        pendingFinishedAfterStop   = false;
+    /* ===== Program end: completed vs aborted =====
+       programWasActive is a latch, so we don't miss the end if halui goes through a
+       ST_UNKNOWN cycle before IDLE.
+         - e-stop / machine off while the program is active: pulse programAborted at once.
+         - red button: handled in the abort block (immediate if already IDLE, otherwise
+           armed via pendingAbortedAfterStop and pulsed on the first 0->1 of programIdle);
+           if CycleStart is pressed meanwhile, cancel the pending pulse.
+         - normal M2/M30 end: the program was active and reaches IDLE with no abort armed.
+       programCompleted is a LEVEL (for the UI), held until the red button is pressed or
+       the program is started again; only programAborted is a pulse. */
+    if (state == ST_RUNNING || state == ST_PAUSED_NO_SINGLE_BLOCK || state == ST_PAUSED_SINGLE_BLOCK) {
+        programWasActive = true;
+        programCompleted = 0;      /* the program runs again -> leave the completed state */
     }
-    if (pendingFinishedAfterStop && cycleStartEdge) {
-        pendingFinishedAfterStop   = false;
+
+    if (machineOnFall && programLoaded && (programWasActive || !programIdle)) {
+        pulse_output_pin(&t_aborted, &programAborted, outputPulseDuration);
+        last_action_dbg          = 10; /* aborted */
+        pendingAbortedAfterStop  = false;
+        programWasActive         = false;
+        programCompleted         = 0;
+    }
+
+    if (programIdleRise && (pendingAbortedAfterStop || programWasActive)) {
+        if (pendingAbortedAfterStop) {
+            pulse_output_pin(&t_aborted, &programAborted, outputPulseDuration);
+            last_action_dbg      = 10; /* aborted */
+        } else {
+            programCompleted     = 1;  /* latched level, cleared by the red button or a restart */
+            last_action_dbg      = 6;  /* completed */
+        }
+        pendingAbortedAfterStop  = false;
+        programWasActive         = false;
+    }
+    if (pendingAbortedAfterStop && cycleStartEdge) {
+        pendingAbortedAfterStop  = false;
     }
 
     /* ===== GREEN behavior ===== */
@@ -376,6 +414,8 @@ FUNCTION(_)
             switch (state) {
 
                 case ST_IDLE: {
+                    /* also the restart from the completed state: runs from the beginning */
+                    programCompleted = 0;
                     pulse_output_pin(&t_start, &startProgram, outputPulseDuration);
                     last_action_dbg = 1;
                     if (singleBlockLevel) {
@@ -456,16 +496,20 @@ FUNCTION(_)
         toolChanged       = 0;
         t_toolChanged     = 0.0;
 
-        /* arm finished-after-stop */
-        pendingFinishedAfterStop = true;
-        /* dacă suntem DEJA în IDLE, pulsam imediat finished și dezarmăm pending */
+        /* leaving the completed state: drop the level, then pulse aborted */
+        programCompleted = 0;
+
+        /* arm aborted-after-stop */
+        pendingAbortedAfterStop = true;
+        /* if we are ALREADY IDLE, pulse aborted right away and disarm the pending flag */
         if (programIdle) {
-            pulse_output_pin(&t_finished, &finishedProgram, outputPulseDuration);
-            last_action_dbg            = 6; /* finished */
-            pendingFinishedAfterStop   = false;
+            pulse_output_pin(&t_aborted, &programAborted, outputPulseDuration);
+            last_action_dbg            = 10; /* aborted */
+            pendingAbortedAfterStop    = false;
+            programWasActive           = false;
         }
 
-        /* and SB first-step arma off */
+        /* and disarm the SB first-step */
         firstStepAfterEnterSB = false;
     }
 
@@ -573,7 +617,7 @@ FUNCTION(_)
     if (t_resume > 0.0) { t_resume -= dt; if (t_resume <= 0.0) { t_resume = 0.0; resumeProgram = 0; } }
     if (t_step   > 0.0) { t_step   -= dt; if (t_step   <= 0.0) { t_step   = 0.0; stepProgram   = 0; } }
     if (t_stop   > 0.0) { t_stop   -= dt; if (t_stop   <= 0.0) { t_stop   = 0.0; stopProgram   = 0; } }
-    if (t_finished > 0.0) { t_finished -= dt; if (t_finished <= 0.0) { t_finished = 0.0; finishedProgram = 0; } }
+    if (t_aborted  > 0.0) { t_aborted  -= dt; if (t_aborted  <= 0.0) { t_aborted  = 0.0; programAborted = 0; } }
     if (t_toolChanged > 0.0) { t_toolChanged -= dt; if (t_toolChanged <= 0.0) { t_toolChanged = 0.0; toolChanged = 0; } }
 
     /* ===== Latch inputs & base state ===== */
@@ -583,6 +627,7 @@ FUNCTION(_)
     prevSingleBlockLevel = singleBlockLevel;
     prevChuckCoverLevel  = chuckCoverLevel;
     prevToolChangeLevel  = toolChangeLevel;
+    prevMachineOnLevel   = machineOnLevel;
     prevState            = state;
 
     toolChangeAckSent_dbg = toolChangeAckSent;
