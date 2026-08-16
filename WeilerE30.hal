@@ -13,8 +13,6 @@ setp    hm2_[MESA](BOARD).0.watchdog.timeout_ns 5000000
 loadrt  pid     names=pid.x,pid.z,pid.s,pid.o
 loadrt  mux16   names=mux.spindle-override,mux.feed-override,mux.rapid-override
 
-loadusr -W hal_manualtoolchange
-
 # THREADS
 addf    hm2_[MESA](BOARD).0.read    servo-thread
 addf    motion-command-handler      servo-thread
@@ -160,11 +158,3 @@ net machine-is-on           halui.machine.is-on
 
 net in-position               <=  motion.in-position
 net machine-is-enabled        <=  motion.motion-enabled
-
-#  ---manual tool change signals---
-
-net tool:change     iocontrol.0.tool-change         =>  hal_manualtoolchange.change
-net tool:changed    hal_manualtoolchange.changed    =>  iocontrol.0.tool-changed
-net tool:number     iocontrol.0.tool-prep-number    =>  hal_manualtoolchange.number
-#  ---ignore tool prepare requests---
-net tool:prepare    iocontrol.0.tool-prepare        =>  iocontrol.0.tool-prepared
