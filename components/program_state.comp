@@ -108,6 +108,7 @@ static bool prevChuckCoverLevel        = false;
 static bool prevProgramIdleLevel       = false;
 static bool prevToolChangeLevel        = false;
 static bool prevMachineOnLevel         = false;
+static bool prevProgramLoadedLevel     = false;
 
 static bool postStartPausePending      = false;   /* after Start with SB=ON, pause when RUNNING appears */
 static bool feedHoldLatched            = false;   /* mirror of the feedInhibit we drive */
@@ -183,12 +184,14 @@ FUNCTION(_)
     bool programIdleLevel   = programIdle;
     bool toolChangeLevel    = toolChange;
     bool machineOnLevel     = machineOn;
+    bool programLoadedLevel = programLoaded;
 
     /* On first call, sync prev states to avoid false edges at startup */
     if (firstCall) {
         prevChuckCoverLevel = chuckCoverLevel;
         prevToolChangeLevel = toolChangeLevel;
         prevMachineOnLevel  = machineOnLevel;
+        prevProgramLoadedLevel = programLoadedLevel;
         firstCall = false;
     }
 
@@ -202,6 +205,7 @@ FUNCTION(_)
     bool toolChangeRise     = ( toolChangeLevel && !prevToolChangeLevel );
     bool toolChangeFall     = ( !toolChangeLevel && prevToolChangeLevel );
     bool machineOnFall      = ( !machineOnLevel && prevMachineOnLevel );
+    bool programLoadedRise  = ( programLoadedLevel && !prevProgramLoadedLevel );
 
     /* ===== Tool change guard =====
        While the interpreter waits for a tool change, GREEN confirms the change and
@@ -252,13 +256,19 @@ FUNCTION(_)
         overlayState = OV_NONE;
         spindleUninhibitCommanded = false;
 
-        /* nothing may survive a program unload / reload */
-        programWasActive        = false;
-        pendingAbortedAfterStop = false;
-        programCompleted        = 0;
+        /* no stale tool change may survive */
         toolChangeAckSent = false;
         toolChanged       = 0;
         t_toolChanged     = 0.0;
+    }
+
+    /* The GUI may drop programLoaded when the program ends, so the end-of-program
+       latches must NOT be cleared by that. They are cleared when a program is
+       (re)loaded, i.e. on the 0->1 edge of programLoaded. */
+    if (programLoadedRise) {
+        programWasActive        = false;
+        pendingAbortedAfterStop = false;
+        programCompleted        = 0;
     }
 
     /* ===== Overlay bootstrap when cover is already open at load =====
@@ -462,7 +472,20 @@ FUNCTION(_)
                     }
                 } break;
 
-                case ST_NOT_LOADED:
+                case ST_NOT_LOADED: {
+                    /* The GUI may drop programLoaded at the end of the program, while the
+                       interpreter still has the file open: GREEN restarts it from the
+                       beginning, exactly like in ST_IDLE. */
+                    if (programCompleted) {
+                        programCompleted = 0;
+                        pulse_output_pin(&t_start, &startProgram, outputPulseDuration);
+                        last_action_dbg = 1;
+                        if (singleBlockLevel) {
+                            postStartPausePending = true;
+                        }
+                    }
+                } break;
+
                 case ST_UNKNOWN:
                 default: {
                     /* ignore */
@@ -628,6 +651,7 @@ FUNCTION(_)
     prevChuckCoverLevel  = chuckCoverLevel;
     prevToolChangeLevel  = toolChangeLevel;
     prevMachineOnLevel   = machineOnLevel;
+    prevProgramLoadedLevel = programLoadedLevel;
     prevState            = state;
 
     toolChangeAckSent_dbg = toolChangeAckSent;
