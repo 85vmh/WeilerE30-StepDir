@@ -77,6 +77,9 @@ net js.reset-required       weiler-manual-mode.0.resetRequired   => TeachInLathe
 net app.program-loaded      program-state.0.programLoaded
 net out.cycle-start-led     =>  TeachInLathe.app-status.cycle-start-led
 
+net prg.completed           =>  TeachInLathe.app-status.program-completed
+net prg.aborted             =>  TeachInLathe.app-status.program-aborted
+
 
 # Tool change will be confirmed by cycle start. 
 
