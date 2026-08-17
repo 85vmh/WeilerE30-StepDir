@@ -56,6 +56,9 @@ net machine-is-on      =>  weiler-spindle.0.machineOn
 net sp.is-running      =>  weiler-spindle.0.spindleOn
 net in.spindle-neutral =>  weiler-spindle.0.spindleNeutral
 net in.chuck-cover     =>  weiler-spindle.0.spindleCoverOpened
+# in AUTO the chuck cover is owned by program_state, so weiler_spindle must stand
+# down; without this writer the signal stayed 0 and it also latched during programs
+net in.is-auto-mode    <=  halui.mode.is-auto
 net in.is-auto-mode    =>  weiler-spindle.0.isAutoMode
 
 net man.sInhibit       weiler-spindle.0.spindleInhibit  =>  or.sp-inhibit.in1

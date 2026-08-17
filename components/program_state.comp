@@ -125,6 +125,7 @@ static int  overlayState               = OV_NONE;
 static int  prevStateBeforeCover       = ST_UNKNOWN;
 static bool spindleUninhibitCommanded  = false;   /* set when we drop spindleInhibit in OV_SPINDLE_RESUME_REQ */
 static bool spindleWasRunningAtCover   = false;   /* spindle actually turning when the interlock engaged */
+static bool coverInterlockEngaged      = false;   /* feed/spindle held because of the cover */
 
 /* ===== Pulse timers (seconds) ===== */
 static double t_start       = 0.0;
@@ -229,9 +230,13 @@ FUNCTION(_)
         /* remember base state at opening */
         prevStateBeforeCover = state;
 
-        if (state == ST_RUNNING) {
-            /* Engage safety ONLY if we were running */
+        /* A paused program counts as engaged too: the spindle keeps turning while
+           paused, so closing the cover must not restart anything by itself. */
+        if (state == ST_RUNNING ||
+            state == ST_PAUSED_NO_SINGLE_BLOCK ||
+            state == ST_PAUSED_SINGLE_BLOCK) {
             overlayState               = OV_CHUCK_COVER_OPENED;
+            coverInterlockEngaged      = true;
 
             feedInhibit                = 1;
             feedHoldLatched            = true;
@@ -245,6 +250,7 @@ FUNCTION(_)
 
             last_action_dbg            = 7; /* hold_on, informational */
         } else {
+            coverInterlockEngaged = false;
             /* IDLE + programLoaded + cover open BEFORE start */
             if (state == ST_IDLE && programLoaded) {
                 overlayState = OV_CHUCK_COVER_OPENED;  /* LED_COVER_FAST + CycleStart not allowed */
@@ -255,7 +261,7 @@ FUNCTION(_)
     }
 
     if (chuckCoverFall && (overlayState == OV_CHUCK_COVER_OPENED)) {
-        if (prevStateBeforeCover == ST_RUNNING) {
+        if (coverInterlockEngaged) {
             if (spindleWasRunningAtCover) {
                 overlayState              = OV_SPINDLE_RESUME_REQ;
                 spindleUninhibitCommanded = false;
@@ -267,15 +273,17 @@ FUNCTION(_)
                 spindleUninhibitCommanded = false;
             }
         } else {
-            /* If we didn’t engage because we weren’t running, nothing to resume */
+            /* If we didn't engage because the program was not active, nothing to resume */
             overlayState              = OV_NONE;
         }
+        coverInterlockEngaged = false;
     }
 
     /* Nothing from the cover may stay engaged while a tool change is pending, not
        even an overlay armed before the change was requested. */
     if (toolChangePending && overlayState != OV_NONE) {
         overlayState              = OV_NONE;
+        coverInterlockEngaged     = false;
         spindleUninhibitCommanded = false;
         spindleInhibit            = 0;
         if (feedHoldLatched) {
@@ -287,6 +295,7 @@ FUNCTION(_)
 
     if (!programLoaded) {
         overlayState = OV_NONE;
+        coverInterlockEngaged = false;
         spindleUninhibitCommanded = false;
 
         /* no stale tool change may survive */
@@ -551,6 +560,7 @@ FUNCTION(_)
 
         /* reset overlay */
         overlayState = OV_NONE;
+        coverInterlockEngaged = false;
         spindleInhibit = 0;
         spindleUninhibitCommanded = false;
 
