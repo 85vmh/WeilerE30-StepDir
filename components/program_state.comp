@@ -216,8 +216,15 @@ FUNCTION(_)
         toolChangeAckSent = false;
     }
 
-    /* ===== Overlay: enter/exit logic for chuck cover ===== */
-    if (chuckCoverRise) {
+    /* ===== Overlay: enter/exit logic for chuck cover =====
+       The cover is ignored while a tool change is pending: the machine is stopped
+       waiting for the operator, who legitimately needs the cover open to swap the
+       tool. If it is still open when the change is confirmed, the falling edge of
+       toolChange engages the overlay exactly like an opening would. */
+    bool coverEngage = ( chuckCoverRise && !toolChangePending ) ||
+                       ( toolChangeFall && chuckCoverLevel );
+
+    if (coverEngage) {
         /* remember base state at opening */
         prevStateBeforeCover = state;
 
@@ -252,6 +259,19 @@ FUNCTION(_)
         }
     }
 
+    /* Nothing from the cover may stay engaged while a tool change is pending, not
+       even an overlay armed before the change was requested. */
+    if (toolChangePending && overlayState != OV_NONE) {
+        overlayState              = OV_NONE;
+        spindleUninhibitCommanded = false;
+        spindleInhibit            = 0;
+        if (feedHoldLatched) {
+            feedInhibit     = 0;
+            feedHoldLatched = false;
+            last_action_dbg = 8; /* hold_off */
+        }
+    }
+
     if (!programLoaded) {
         overlayState = OV_NONE;
         spindleUninhibitCommanded = false;
@@ -274,7 +294,8 @@ FUNCTION(_)
     /* ===== Overlay bootstrap when cover is already open at load =====
        If there was no rise (cover was already 1) and we are IDLE with a program loaded,
        force the overlay for LED_COVER_FAST and to block CycleStart. */
-    if (overlayState == OV_NONE && chuckCoverLevel && programLoaded && state == ST_IDLE) {
+    if (overlayState == OV_NONE && chuckCoverLevel && programLoaded && state == ST_IDLE
+        && !toolChangePending) {
         overlayState = OV_CHUCK_COVER_OPENED;   /* without feed/spindle inhibit */
         prevStateBeforeCover = ST_IDLE;
     }
