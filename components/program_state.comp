@@ -124,6 +124,7 @@ static bool firstCall                  = true;
 static int  overlayState               = OV_NONE;
 static int  prevStateBeforeCover       = ST_UNKNOWN;
 static bool spindleUninhibitCommanded  = false;   /* set when we drop spindleInhibit in OV_SPINDLE_RESUME_REQ */
+static bool spindleWasRunningAtCover   = false;   /* spindle actually turning when the interlock engaged */
 
 /* ===== Pulse timers (seconds) ===== */
 static double t_start       = 0.0;
@@ -238,6 +239,10 @@ FUNCTION(_)
             spindleInhibit             = 1;
             spindleUninhibitCommanded  = false;
 
+            /* Sampled before our inhibit takes effect: if the spindle was not
+               turning, there is nothing to spin back up when the cover closes. */
+            spindleWasRunningAtCover   = spindleAtSpeed;
+
             last_action_dbg            = 7; /* hold_on, informational */
         } else {
             /* IDLE + programLoaded + cover open BEFORE start */
@@ -251,8 +256,16 @@ FUNCTION(_)
 
     if (chuckCoverFall && (overlayState == OV_CHUCK_COVER_OPENED)) {
         if (prevStateBeforeCover == ST_RUNNING) {
-            overlayState              = OV_SPINDLE_RESUME_REQ;
-            spindleUninhibitCommanded = false;
+            if (spindleWasRunningAtCover) {
+                overlayState              = OV_SPINDLE_RESUME_REQ;
+                spindleUninhibitCommanded = false;
+            } else {
+                /* Nothing to spin up: spindleAtSpeed is gated by spindle-is-on in
+                   HAL, so waiting for it here would never end. Straight to feed. */
+                overlayState              = OV_FEED_RESUME_REQ;
+                spindleInhibit            = 0;
+                spindleUninhibitCommanded = false;
+            }
         } else {
             /* If we didn’t engage because we weren’t running, nothing to resume */
             overlayState              = OV_NONE;
@@ -418,6 +431,14 @@ FUNCTION(_)
                     last_action_dbg = 8;
                 }
                 overlayState = OV_NONE;  /* back to base; base should be Running naturally */
+
+                /* If the program was actually paused while the cover was open (a
+                   tool change confirmed in between does that), releasing the feed
+                   is not enough - it has to be resumed as well. */
+                if (state == ST_PAUSED_NO_SINGLE_BLOCK) {
+                    pulse_output_pin(&t_resume, &resumeProgram, outputPulseDuration);
+                    last_action_dbg = 3;
+                }
             } else {
                 /* SB ON: motionType != 0 -> release hold; motionType == 0 -> STEP */
                 if (motionType != 0) {
