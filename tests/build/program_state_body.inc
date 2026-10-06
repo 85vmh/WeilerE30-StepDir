@@ -1,73 +1,53 @@
-component program_state "Readable program state machine: Running / Paused (SB/NoSB) with motion-type based STEP vs feed-hold toggle + Chuck cover safety overlay";
-
-/* ===== Inputs ===== */
-pin in  bool   programLoaded;        /* TRUE when a program is loaded */
-pin in  bool   cycleStart;           /* user green button (edge: rising) */
-pin in  bool   cycleAbort;           /* user red button (edge: rising) */
-pin in  bool   singleBlock;          /* SB switch (level) */
-pin in  bool   programIdle;          /* halui.program.is-idle */
-pin in  bool   programPaused;        /* halui.program.is-paused */
-pin in  bool   programRunning;       /* halui.program.is-running */
-
-/* motion.motion-type: 0 = standstill ; nonzero = moving (rapid/feed/arc/...) */
-pin in  si32   motionType;
-
-/* Safety overlay inputs */
-pin in  bool   chuckCoverOpened;     /* 1 = cover open */
-pin in  bool   spindleAtSpeed;       /* 1 = spindle at commanded speed */
-
-/* Tool change handshake */
-pin in  bool   toolChange;           /* <- iocontrol.0.tool-change */
-
-/* Machine power: falling edge while a program is active = abort (e-stop, machine off) */
-pin in  bool   machineOn;            /* <- halui.machine.is-on */
-
-/* Pulse duration (seconds; 0.1 = 100ms) for all command pulses */
-pin in  real outputPulseDuration = 0.10;
-
-/* ===== Outputs (commands) ===== */
-pin out bool   startProgram;         /* -> halui.program.run    (pulse) */
-pin out bool   pauseProgram;         /* -> halui.program.pause  (pulse) */
-pin out bool   resumeProgram;        /* -> halui.program.resume (pulse) */
-pin out bool   stepProgram;          /* -> halui.program.step   (pulse) */
-pin out bool   stopProgram;          /* -> halui.program.stop   (pulse) */
-pin out bool   programCompleted;     /* program ended normally (M2/M30)      (level, for the UI) */
-pin out bool   programAborted;       /* program stopped by red button/e-stop (pulse) */
-pin out bool   toolChanged;          /* -> iocontrol.0.tool-changed (pulse) */
-
-/* Feed-hold + Spindle inhibit (levels) */
-pin out bool   feedInhibit;          /* -> motion.feed-inhibit (0=run, 1=hold) */
-pin out bool   spindleInhibit;       /* user-mapped: inhibit spindle (1=block, 0=allow) */
-
-/* ===== Status pins (stay ON while in that state) ===== */
-pin out bool   statusProgramIdle;            /* ON in ST_IDLE */
-pin out bool   statusProgramRunning;         /* ON in ST_RUNNING */
-pin out bool   statusProgramPaused;          /* ON in ST_PAUSED_* */
-pin out bool   statusIsSingleBlock;          /* mirror singleBlock input */
-pin out bool   statusStepPaused;             /* true in ST_PAUSED_SINGLE_BLOCK iff motionType!=0 */
-
-/* New status pins for overlay states */
-pin out bool   statusChuckCoverOpened;       /* ON in ST_CHUCK_COVER_OPENED */
-pin out bool   statusSpindleResumeRequired;  /* ON in ST_SPINDLE_RESUME_REQUIRED */
-pin out bool   statusFeedResumeRequired;     /* ON in ST_FEED_RESUME_REQUIRED */
-pin out bool   statusToolChangeRequired;     /* ON while waiting for the tool change confirmation */
-
-/* ===== LED (green CycleStart) ===== */
-pin out bool   cycleStartLedStatus;          /* RUNNING=ON; PAUSED=blink 500/500; IDLE&loaded=double-blink; other per overlay */
-
-/* ===== Debug ===== */
-param rw si32  state_dbg;                    /* base state: 0=NOT_LOADED,1=IDLE,2=RUNNING,3=PAUSED_NO_SB,4=PAUSED_SB,5=UNKNOWN */
-param rw bool  postStartPausePending_dbg;    /* armed pause after Start in SB */
-param rw si32  last_action_dbg;              /* 1=start,2=pause,3=resume,4=step,5=stop,6=completed,7=hold_on,8=hold_off,9=tool_changed,10=aborted */
-param rw bool  toolChangeAckSent_dbg;        /* tool change already confirmed for the current request */
-param rw si32  overlay_dbg;                  /* 0=NONE, 1=COVER_OPEN, 2=SPINDLE_RESUME_REQ, 3=FEED_RESUME_REQ */
-
-/* ===== Function ===== */
-function _;
-license "GPLv2";
-author  "vasi mihalca";
-
-;;
+#define startProgram_set(v) (startProgram = (v))
+#define startProgram_ptr (&startProgram)
+#define pauseProgram_set(v) (pauseProgram = (v))
+#define pauseProgram_ptr (&pauseProgram)
+#define resumeProgram_set(v) (resumeProgram = (v))
+#define resumeProgram_ptr (&resumeProgram)
+#define stepProgram_set(v) (stepProgram = (v))
+#define stepProgram_ptr (&stepProgram)
+#define stopProgram_set(v) (stopProgram = (v))
+#define stopProgram_ptr (&stopProgram)
+#define programCompleted_set(v) (programCompleted = (v))
+#define programCompleted_ptr (&programCompleted)
+#define programAborted_set(v) (programAborted = (v))
+#define programAborted_ptr (&programAborted)
+#define toolChanged_set(v) (toolChanged = (v))
+#define toolChanged_ptr (&toolChanged)
+#define feedInhibit_set(v) (feedInhibit = (v))
+#define feedInhibit_ptr (&feedInhibit)
+#define spindleInhibit_set(v) (spindleInhibit = (v))
+#define spindleInhibit_ptr (&spindleInhibit)
+#define statusProgramIdle_set(v) (statusProgramIdle = (v))
+#define statusProgramIdle_ptr (&statusProgramIdle)
+#define statusProgramRunning_set(v) (statusProgramRunning = (v))
+#define statusProgramRunning_ptr (&statusProgramRunning)
+#define statusProgramPaused_set(v) (statusProgramPaused = (v))
+#define statusProgramPaused_ptr (&statusProgramPaused)
+#define statusIsSingleBlock_set(v) (statusIsSingleBlock = (v))
+#define statusIsSingleBlock_ptr (&statusIsSingleBlock)
+#define statusStepPaused_set(v) (statusStepPaused = (v))
+#define statusStepPaused_ptr (&statusStepPaused)
+#define statusChuckCoverOpened_set(v) (statusChuckCoverOpened = (v))
+#define statusChuckCoverOpened_ptr (&statusChuckCoverOpened)
+#define statusSpindleResumeRequired_set(v) (statusSpindleResumeRequired = (v))
+#define statusSpindleResumeRequired_ptr (&statusSpindleResumeRequired)
+#define statusFeedResumeRequired_set(v) (statusFeedResumeRequired = (v))
+#define statusFeedResumeRequired_ptr (&statusFeedResumeRequired)
+#define statusToolChangeRequired_set(v) (statusToolChangeRequired = (v))
+#define statusToolChangeRequired_ptr (&statusToolChangeRequired)
+#define cycleStartLedStatus_set(v) (cycleStartLedStatus = (v))
+#define cycleStartLedStatus_ptr (&cycleStartLedStatus)
+#define state_dbg_set(v) (state_dbg = (v))
+#define state_dbg_ptr (&state_dbg)
+#define postStartPausePending_dbg_set(v) (postStartPausePending_dbg = (v))
+#define postStartPausePending_dbg_ptr (&postStartPausePending_dbg)
+#define last_action_dbg_set(v) (last_action_dbg = (v))
+#define last_action_dbg_ptr (&last_action_dbg)
+#define toolChangeAckSent_dbg_set(v) (toolChangeAckSent_dbg = (v))
+#define toolChangeAckSent_dbg_ptr (&toolChangeAckSent_dbg)
+#define overlay_dbg_set(v) (overlay_dbg = (v))
+#define overlay_dbg_ptr (&overlay_dbg)
 #include <stdbool.h>
 #include "rtapi.h"
 #include "hal.h"

@@ -24,9 +24,14 @@ binaries: $(BINS)
 $(COMPS): %: $(BUILD)/test_%
 	$(BUILD)/test_$@
 
-# Everything after the ';;' line of a .comp is plain C
+# Everything after the ';;' line of a .comp is plain C. It is preceded by the
+# NAME_set(v) / NAME_ptr accessors halcompile generates for every writable pin
+# and param, mapped onto the plain globals the test file declares.
 $(BUILD)/%_body.inc: ../components/%.comp | $(BUILD)
-	sed '1,/^;;$$/d' $< > $@
+	sed -nE 's/^[[:space:]]*(pin[[:space:]]+(out|io)|param[[:space:]]+rw?)[[:space:]]+[a-z0-9]+[[:space:]]+([A-Za-z0-9_.-]+).*/\3/p' $< \
+	    | tr '.-' '__' \
+	    | awk '{ printf "#define %s_set(v) (%s = (v))\n#define %s_ptr (&%s)\n", $$1, $$1, $$1, $$1 }' > $@
+	sed '1,/^;;$$/d' $< >> $@
 
 .PRECIOUS: $(BUILD)/%_body.inc
 

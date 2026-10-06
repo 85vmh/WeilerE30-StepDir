@@ -19,10 +19,16 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-/* ===== HAL types the component bodies expect ===== */
+/* ===== HAL types the component bodies expect =====
+ * Pins are plain globals here; the hal_*_t names below are only the test
+ * files' storage types. hal_bool_t is the pin handle a body gets from NAME_ptr
+ * (see the Makefile), so it points at that global. */
 typedef int   hal_bit_t;
 typedef int   hal_s32_t;
 typedef float hal_float_t;
+
+typedef int  *hal_bool_t;
+#define hal_set_bool(ref, v) (*(ref) = (v))
 
 #define FUNCTION(name) void comp_run(void)
 void comp_run(void);

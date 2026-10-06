@@ -12,6 +12,8 @@ loadrt anglejog         names=anglejog-x,anglejog-z
 loadrt scaled_s32_sums  names=sincounts,coscounts
 loadrt mux2s32          names=x-counts,z-counts
 
+#Get rid of ilowpass and add joint.n.jog-accel-fraction and axis.n.jog-accel-fraction
+
 addf x-counts   servo-thread
 addf z-counts   servo-thread
 addf encoder.capture-position   servo-thread

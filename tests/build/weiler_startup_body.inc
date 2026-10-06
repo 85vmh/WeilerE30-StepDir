@@ -1,52 +1,11 @@
-component weiler_startup "Power-on interlock and machine on/off pulses for the Weiler lathe";
-
-/* ===== Inputs ===== */
-pin in  bool   machine-on        "halui.machine.is-on (machine-is-on)";
-pin in  bool   powered-on        "Contactor / drives-enabled feedback (in.enable-drives)";
-pin in  bool   joystick-neutral  "in.joystick-neutral";
-pin in  bool   spindle-neutral   "in.spindle-neutral";
-
-pin in  si32   powered-on-debounce   = 5    "Debounce for powered-on, in thread samples (like debounce.N.delay)";
-pin in  real output-pulse-duration = 0.10 "Seconds; length of the turn-on / turn-off pulses";
-
-/* ===== Outputs ===== */
-pin out bool   nc-ready   "-> out.nc-ready (SSR): power-on interlock, held while the machine is on";
-pin out bool   turn-on    "-> halui.machine.on  (pulse)";
-pin out bool   turn-off   "-> halui.machine.off (pulse)";
-
-/* ===== Debug ===== */
-param rw bool  powered_on_dbg;   /* debounced powered-on, for troubleshooting */
-
-function _ "Run the startup interlock and on/off pulses";
-license "GPLv2";
-author  "vasi";
-
-description """
-Replaces the *OnOff* section of the ClassicLadder program.
-
-*nc-ready* is the power-on interlock: the machine may only be energised with the
-joystick and the spindle selector on neutral. It is recomputed only while the
-machine is off and then holds its value, which is what the ladder's SET/RESET
-coil pair did.
-
-*turn-on* pulses when the contactor feedback comes up while the machine is off,
-after *powered-on* has been stable for *powered-on-debounce* thread invocations,
-and only if the interlock allows it. *turn-off* pulses on the falling edge of the
-raw *powered-on* input: the off path is deliberately unfiltered, so stopping is
-never delayed.
-
-[source,hal]
-----
-loadrt weiler_startup
-addf weiler-startup.0 servo-thread
-setp weiler-startup.0.powered-on-debounce   30
-setp weiler-startup.0.output-pulse-duration 0.10
-net in.enable-drives => weiler-startup.0.powered-on
-net out.machine-on   weiler-startup.0.turn-on => halui.machine.on
-----
-""";
-
-;;
+#define nc_ready_set(v) (nc_ready = (v))
+#define nc_ready_ptr (&nc_ready)
+#define turn_on_set(v) (turn_on = (v))
+#define turn_on_ptr (&turn_on)
+#define turn_off_set(v) (turn_off = (v))
+#define turn_off_ptr (&turn_off)
+#define powered_on_dbg_set(v) (powered_on_dbg = (v))
+#define powered_on_dbg_ptr (&powered_on_dbg)
 #include <stdbool.h>
 #include "rtapi.h"
 #include "hal.h"

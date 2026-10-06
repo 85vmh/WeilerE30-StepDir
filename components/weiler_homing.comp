@@ -1,23 +1,23 @@
 component weiler_homing "Sequential joystick-driven homing for the Weiler lathe: X first, then Z";
 
 /* ===== Inputs ===== */
-pin in  bit   machine-on    "Machine is powered on (machine-is-on)";
-pin in  bit   joystick-x    "Hold to home X (in.joystick-x-plus)";
-pin in  bit   joystick-z    "Hold to home Z (in.joystick-z-plus)";
-pin in  bit   x-homed       "halui.joint.0.is-homed";
-pin in  bit   z-homed       "halui.joint.1.is-homed";
+pin in  bool   machine-on    "Machine is powered on (machine-is-on)";
+pin in  bool   joystick-x    "Hold to home X (in.joystick-x-plus)";
+pin in  bool   joystick-z    "Hold to home Z (in.joystick-z-plus)";
+pin in  bool   x-homed       "halui.joint.0.is-homed";
+pin in  bool   z-homed       "halui.joint.1.is-homed";
 
-pin in  float abort-pulse-duration      = 0.10  "Seconds; length of the abort-homing pulse";
-pin in  float axes-homed-pulse-duration = 0.10  "Seconds; length of the axes-homed pulse";
+pin in  real abort-pulse-duration      = 0.10  "Seconds; length of the abort-homing pulse";
+pin in  real axes-homed-pulse-duration = 0.10  "Seconds; length of the axes-homed pulse";
 
 /* ===== Outputs ===== */
-pin out bit   home-x        "-> halui.joint.0.home (level, held while homing X)";
-pin out bit   home-z        "-> halui.joint.1.home (level, held while homing Z)";
-pin out bit   abort-homing  "-> halui.abort (pulse) when the joystick is released mid-homing";
-pin out bit   axes-homed    "Pulse once both axes are homed";
+pin out bool   home-x        "-> halui.joint.0.home (level, held while homing X)";
+pin out bool   home-z        "-> halui.joint.1.home (level, held while homing Z)";
+pin out bool   abort-homing  "-> halui.abort (pulse) when the joystick is released mid-homing";
+pin out bool   axes-homed    "Pulse once both axes are homed";
 
 /* ===== Debug ===== */
-param rw s32  state_dbg;    /* 0=IDLE, 1=WAIT_X, 2=HOMING_X, 3=WAIT_Z, 4=HOMING_Z, 5=DONE */
+param rw si32  state_dbg;    /* 0=IDLE, 1=WAIT_X, 2=HOMING_X, 3=WAIT_Z, 4=HOMING_Z, 5=DONE */
 
 function _ "Run the homing state machine";
 license "GPLv2";
@@ -79,13 +79,13 @@ static double t_abort      = 0.0;
 static double t_axes_homed = 0.0;
 
 /* Helper: start a timed pulse on a HAL bit pin */
-static inline void pulse_output_pin(double *timer_ref, hal_bit_t *pin_ref, float duration_sec)
+static inline void pulse_output_pin(double *timer_ref, hal_bool_t pin_ref, float duration_sec)
 {
     double d = (double)duration_sec;
     if (d < 0.01) d = 0.01;
     if (d > 5.00) d = 5.00;
     *timer_ref = d;
-    *pin_ref   = 1;
+    hal_set_bool(pin_ref, 1);
 }
 
 FUNCTION(_)
@@ -100,8 +100,8 @@ FUNCTION(_)
     if (!machine_on_now) {
         /* machine off: silent reset, no abort pulse */
         state           = ST_IDLE;
-        home_x          = 0;
-        home_z          = 0;
+        home_x_set(0);
+        home_z_set(0);
         last_both_homed = 0;    /* so turning back on re-pulses axes-homed */
         goto _timers;
     }
@@ -126,77 +126,77 @@ FUNCTION(_)
 
     switch (state) {
     case ST_WAIT_X:
-        home_x = 0;
-        home_z = 0;
+        home_x_set(0);
+        home_z_set(0);
         if (joy_x_rise) {
             state  = ST_HOMING_X;
-            home_x = 1;
+            home_x_set(1);
         }
         break;
 
     case ST_HOMING_X:
         if (x_homed) {
-            home_x = 0;
+            home_x_set(0);
             state  = ST_WAIT_Z;
         } else if (!joystick_x) {
             /* released before the axis was homed -> cancel the home move */
-            home_x = 0;
-            pulse_output_pin(&t_abort, &abort_homing, abort_pulse_duration);
+            home_x_set(0);
+            pulse_output_pin(&t_abort, abort_homing_ptr, abort_pulse_duration);
             state = ST_WAIT_X;
         } else {
-            home_x = 1;
+            home_x_set(1);
         }
         break;
 
     case ST_WAIT_Z:
-        home_x = 0;
-        home_z = 0;
+        home_x_set(0);
+        home_z_set(0);
         if (joy_z_rise) {
             state  = ST_HOMING_Z;
-            home_z = 1;
+            home_z_set(1);
         }
         break;
 
     case ST_HOMING_Z:
         if (z_homed) {
-            home_z = 0;
+            home_z_set(0);
             state  = ST_DONE;
         } else if (!joystick_z) {
-            home_z = 0;
-            pulse_output_pin(&t_abort, &abort_homing, abort_pulse_duration);
+            home_z_set(0);
+            pulse_output_pin(&t_abort, abort_homing_ptr, abort_pulse_duration);
             state = ST_WAIT_Z;
         } else {
-            home_z = 1;
+            home_z_set(1);
         }
         break;
 
     case ST_DONE:
     default:
-        home_x = 0;
-        home_z = 0;
+        home_x_set(0);
+        home_z_set(0);
         break;
     }
 
     /* both axes homed: independent of the state machine, so it also fires when
        the machine comes on with the axes already homed */
     if (both_homed && !last_both_homed)
-        pulse_output_pin(&t_axes_homed, &axes_homed, axes_homed_pulse_duration);
+        pulse_output_pin(&t_axes_homed, axes_homed_ptr, axes_homed_pulse_duration);
     last_both_homed = both_homed;
 
 _timers:
     /* ===== Pulse timers ===== */
     if (t_abort > 0.0) {
         t_abort -= fperiod;
-        if (t_abort <= 0.0) { t_abort = 0.0; abort_homing = 0; }
+        if (t_abort <= 0.0) { t_abort = 0.0; abort_homing_set(0); }
     }
     if (t_axes_homed > 0.0) {
         t_axes_homed -= fperiod;
-        if (t_axes_homed <= 0.0) { t_axes_homed = 0.0; axes_homed = 0; }
+        if (t_axes_homed <= 0.0) { t_axes_homed = 0.0; axes_homed_set(0); }
     }
 
     /* remember edges */
     last_joystick_x = joystick_x ? 1 : 0;
     last_joystick_z = joystick_z ? 1 : 0;
 
-    state_dbg = state;
+    state_dbg_set(state);
 }

@@ -1,14 +1,14 @@
 component spindle_lubrication "Periodic lubrication with force-on and seconds-until-on/off display";
 
 /* ===== Pins ===== */
-pin in  bit   machineOn         "Enable logic when machine is ON";
-pin in  float onTime            "Seconds of lubrication ON time";
-pin in  float offTime           "Seconds of OFF (wait) time";
-pin in  bit   forceOn           "Pulse: start an immediate ON cycle if machine is ON";
+pin in  bool   machineOn         "Enable logic when machine is ON";
+pin in  real onTime            "Seconds of lubrication ON time";
+pin in  real offTime           "Seconds of OFF (wait) time";
+pin in  bool   forceOn           "Pulse: start an immediate ON cycle if machine is ON";
 
-pin out bit   lubricate         "Lubrication command";
-pin out s32   secondsTillOn     "Whole seconds remaining to next ON (0 while ON)";
-pin out s32   secondsTillOff    "Whole seconds remaining to end of ON (0 while OFF)";
+pin out bool   lubricate         "Lubrication command";
+pin out si32   secondsTillOn     "Whole seconds remaining to next ON (0 while ON)";
+pin out si32   secondsTillOff    "Whole seconds remaining to end of ON (0 while OFF)";
 
 /* ===== RT function ===== */
 function _;
@@ -135,9 +135,9 @@ FUNCTION(_)
 
 _out:
     /* drive HAL outputs */
-    lubricate      = o_lube;
-    secondsTillOn  = o_secsOn;
-    secondsTillOff = o_secsOff;
+    lubricate_set(o_lube);
+    secondsTillOn_set(o_secsOn);
+    secondsTillOff_set(o_secsOff);
 
     /* remember edges */
     last_machineOn = machine_on_now;

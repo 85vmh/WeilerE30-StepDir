@@ -1,14 +1,14 @@
 component spindle_angle "Spindle angle in degrees, derived from a 1:1 encoder referenced to its index pulse";
 
 /* ===== Pins ===== */
-pin in  float position        "Encoder position in revolutions (encoder.NN.position)";
-pin in  float offset = 0.0    "Mechanical offset in degrees between index pulse and desired zero";
-pin in  bit   index-enable    "Connect to the same signal that drives encoder.NN.index-enable";
+pin in  real position        "Encoder position in revolutions (encoder.NN.position)";
+pin in  real offset = 0.0    "Mechanical offset in degrees between index pulse and desired zero";
+pin in  bool   index-enable    "Connect to the same signal that drives encoder.NN.index-enable";
 
-pin out float angle           "Spindle angle, 0 <= angle < 360";
-pin out s32   angle-int       "Spindle angle rounded to whole degrees, 0..359";
-pin out s32   revolutions     "Whole revolutions counted since the index pulse";
-pin out bit   referenced      "True once an index pulse has been seen (angle is meaningful)";
+pin out real angle           "Spindle angle, 0 <= angle < 360";
+pin out si32   angle-int       "Spindle angle rounded to whole degrees, 0..359";
+pin out si32   revolutions     "Whole revolutions counted since the index pulse";
+pin out bool   referenced      "True once an index pulse has been seen (angle is meaningful)";
 
 function _ "Update angle from position";
 license "GPLv2";
@@ -43,7 +43,7 @@ FUNCTION(_)
 
     /* an index pulse clears index-enable: latch that we are referenced */
     if (last_index_enable && !index_enable)
-        referenced = 1;
+        referenced_set(1);
     last_index_enable = index_enable;
 
     revs = position + offset / 360.0;
@@ -52,13 +52,13 @@ FUNCTION(_)
        so reverse rotation gives the correct angle instead of a negative one */
     frac = revs - floor(revs);
 
-    angle = frac * 360.0;
+    angle_set(frac * 360.0);
     if (angle >= 360.0)     /* guard against rounding at the wrap point */
-        angle = 0.0;
+        angle_set(0.0);
 
-    angle_int = (int)(angle + 0.5);
+    angle_int_set((int)(angle + 0.5));
     if (angle_int >= 360)
-        angle_int = 0;
+        angle_int_set(0);
 
-    revolutions = (int)floor(position);
+    revolutions_set((int)floor(position));
 }

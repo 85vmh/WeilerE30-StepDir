@@ -1,18 +1,18 @@
 component weiler_spindle "Chuck cover safety for the spindle in manual/MDI mode";
 
 /* ===== Inputs ===== */
-pin in  bit   machineOn            "halui.machine.is-on (machine-is-on)";
-pin in  bit   spindleOn            "halui.spindle.0.is-on (sp.is-running)";
-pin in  bit   spindleNeutral       "in.spindle-neutral";
-pin in  bit   spindleCoverOpened   "in.chuck-cover (1 = open)";
-pin in  bit   isAutoMode           "halui.mode.is-auto (in.is-auto-mode)";
+pin in  bool   machineOn            "halui.machine.is-on (machine-is-on)";
+pin in  bool   spindleOn            "halui.spindle.0.is-on (sp.is-running)";
+pin in  bool   spindleNeutral       "in.spindle-neutral";
+pin in  bool   spindleCoverOpened   "in.chuck-cover (1 = open)";
+pin in  bool   isAutoMode           "halui.mode.is-auto (in.is-auto-mode)";
 
-pin in  float outputPulseDuration = 0.10  "Seconds; length of the spindleStop pulse";
+pin in  real outputPulseDuration = 0.10  "Seconds; length of the spindleStop pulse";
 
 /* ===== Outputs ===== */
-pin out bit   spindleInhibit               "-> or.sp-inhibit.in1 (latched)";
-pin out bit   spindleStop                  "-> halui.spindle.0.stop (pulse)";
-pin out bit   statusSpindleResetRequired   "Latched: selector to neutral + cover closed to clear";
+pin out bool   spindleInhibit               "-> or.sp-inhibit.in1 (latched)";
+pin out bool   spindleStop                  "-> halui.spindle.0.stop (pulse)";
+pin out bool   statusSpindleResetRequired   "Latched: selector to neutral + cover closed to clear";
 
 function _ "Run the chuck cover safety logic";
 license "GPLv2";
@@ -58,13 +58,13 @@ static int last_stop_cond = 0;
 static double t_stop = 0.0;
 
 /* Helper: start a timed pulse on a HAL bit pin */
-static inline void pulse_output_pin(double *timer_ref, hal_bit_t *pin_ref, float duration_sec)
+static inline void pulse_output_pin(double *timer_ref, hal_bool_t pin_ref, float duration_sec)
 {
     double d = (double)duration_sec;
     if (d < 0.01) d = 0.01;
     if (d > 5.00) d = 5.00;
     *timer_ref = d;
-    *pin_ref   = 1;
+    hal_set_bool(pin_ref, 1);
 }
 
 FUNCTION(_)
@@ -73,29 +73,29 @@ FUNCTION(_)
 
     /* ===== Cover opened with the spindle running, in manual/MDI: latch ===== */
     if (spindleCoverOpened && spindleOn && !isAutoMode) {
-        spindleInhibit             = 1;
-        statusSpindleResetRequired = 1;
+        spindleInhibit_set(1);
+        statusSpindleResetRequired_set(1);
     }
 
     /* ===== Selector back to neutral with the cover closed: clear the latch =====
        Mutually exclusive with the block above, so the order does not matter -
        same as the SET and RESET coils in the ladder. */
     if (spindleNeutral && !spindleCoverOpened) {
-        statusSpindleResetRequired = 0;
-        spindleInhibit             = 0;
+        statusSpindleResetRequired_set(0);
+        spindleInhibit_set(0);
     }
 
     /* ===== Selector to neutral with the machine on, in manual/MDI: stop pulse ===== */
     stop_cond = (spindleNeutral && machineOn && !isAutoMode) ? 1 : 0;
 
     if (stop_cond && !last_stop_cond)
-        pulse_output_pin(&t_stop, &spindleStop, outputPulseDuration);
+        pulse_output_pin(&t_stop, spindleStop_ptr, outputPulseDuration);
 
     last_stop_cond = stop_cond;
 
     /* ===== Pulse timer ===== */
     if (t_stop > 0.0) {
         t_stop -= fperiod;
-        if (t_stop <= 0.0) { t_stop = 0.0; spindleStop = 0; }
+        if (t_stop <= 0.0) { t_stop = 0.0; spindleStop_set(0); }
     }
 }

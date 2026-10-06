@@ -1,33 +1,33 @@
 component weiler_manual_mode "Realtime joystick/feed state machine for Weiler lathe with reset-required & angle feed";
 
 /* ===== Inputs ===== */
-pin in  bit   spindleOn;
-pin in  float spindleRpm;       // RPM
-pin in  float feedPerRev;       // mm/rev
-pin in  float feedOverride;     // 0.0 .. 1.2
-pin in  float jogRapidSpeed;    // mm/s
-pin in  float startFeedDelay;   // seconds
-pin in  float allowMpgDelay;    // seconds
-pin in  bit   joystickNeutral;
-pin in  bit   joystickXMinus;
-pin in  bit   joystickXPlus;
-pin in  bit   joystickZMinus;
-pin in  bit   joystickZPlus;
-pin in  bit   joystickRapid;
-pin in  bit   angleFeed;
+pin in  bool   spindleOn;
+pin in  real spindleRpm;       // RPM
+pin in  real feedPerRev;       // mm/rev
+pin in  real feedOverride;     // 0.0 .. 1.2
+pin in  real jogRapidSpeed;    // mm/s
+pin in  real startFeedDelay;   // seconds
+pin in  real allowMpgDelay;    // seconds
+pin in  bool   joystickNeutral;
+pin in  bool   joystickXMinus;
+pin in  bool   joystickXPlus;
+pin in  bool   joystickZMinus;
+pin in  bool   joystickZPlus;
+pin in  bool   joystickRapid;
+pin in  bool   angleFeed;
 
 /* ===== Outputs ===== */
-pin out bit   jogXMinus;
-pin out bit   jogXPlus;
-pin out bit   jogZMinus;
-pin out bit   jogZPlus;
-pin out float jogSpeed;         // NOTE: FEED outputs mm/min; JOG uses jogRapidSpeed as-is
-pin out bit   allowMpg;
-pin out bit   resetRequired;    // 1 when ST_RESET_REQUIRED
-pin out bit   feeding;          // 1 when ST_FEEDING_PENDING or ST_FEEDING_ACTIVE
+pin out bool   jogXMinus;
+pin out bool   jogXPlus;
+pin out bool   jogZMinus;
+pin out bool   jogZPlus;
+pin out real jogSpeed;         // NOTE: FEED outputs mm/min; JOG uses jogRapidSpeed as-is
+pin out bool   allowMpg;
+pin out bool   resetRequired;    // 1 when ST_RESET_REQUIRED
+pin out bool   feeding;          // 1 when ST_FEEDING_PENDING or ST_FEEDING_ACTIVE
 
 /* ===== Debug ===== */
-param rw s32 state_dbg;         // 0=NONE, 1=FEEDING_PENDING, 2=FEEDING_ACTIVE, 3=JOGGING, 4=RESET_REQUIRED
+param rw si32 state_dbg;         // 0=NONE, 1=FEEDING_PENDING, 2=FEEDING_ACTIVE, 3=JOGGING, 4=RESET_REQUIRED
 
 function _;
 license "GPLv2";
@@ -73,7 +73,7 @@ FUNCTION(_)
     else if (joystickZMinus) dir = DIR_ZMINUS;
 
     /* debug */
-    state_dbg = state;
+    state_dbg_set(state);
 
     /* RESET_REQUIRED gate — now allow direct exit to JOGGING if rapid+dir */
     if (state == ST_RESET_REQUIRED) {
@@ -85,12 +85,12 @@ FUNCTION(_)
             feed_timer = 0.0;
         }
         /* assign and return */
-        jogXMinus = o_xminus; jogXPlus  = o_xplus;
-        jogZMinus = o_zminus; jogZPlus  = o_zplus;
-        jogSpeed  = o_speed;  allowMpg  = o_allowMpg;
-        resetRequired = o_resetReq;
+        jogXMinus_set(o_xminus); jogXPlus_set(o_xplus);
+        jogZMinus_set(o_zminus); jogZPlus_set(o_zplus);
+        jogSpeed_set(o_speed);  allowMpg_set(o_allowMpg);
+        resetRequired_set(o_resetReq);
         /* RESET_REQUIRED can only exit to JOGGING or NONE, never to a feed state */
-        feeding = 0;
+        feeding_set(0);
         return;
     }
 
@@ -201,15 +201,15 @@ FUNCTION(_)
 
     /* outputs */
     if (state == ST_RESET_REQUIRED) o_resetReq = 1;
-    resetRequired = o_resetReq;
+    resetRequired_set(o_resetReq);
 
-    jogXMinus = o_xminus; jogXPlus  = o_xplus;
-    jogZMinus = o_zminus; jogZPlus  = o_zplus;
-    jogSpeed  = o_speed;  allowMpg  = o_allowMpg;
+    jogXMinus_set(o_xminus); jogXPlus_set(o_xplus);
+    jogZMinus_set(o_zminus); jogZPlus_set(o_zplus);
+    jogSpeed_set(o_speed);  allowMpg_set(o_allowMpg);
 
     /* derived from the post-transition state, same as the jog outputs above */
-    feeding = (state == ST_FEEDING_PENDING || state == ST_FEEDING_ACTIVE);
+    feeding_set((state == ST_FEEDING_PENDING || state == ST_FEEDING_ACTIVE));
 
     /* debug pin */
-    state_dbg = state;
+    state_dbg_set(state);
 }
