@@ -1,0 +1,51 @@
+{
+  "1": {
+    "tool_type": "generic",
+    "last_loaded": 1791313017.1228855
+  },
+  "5": {
+    "tool_type": "parting_blade",
+    "last_loaded": 1790463928.1317995,
+    "width": 0.0,
+    "max_depth": 0.0,
+    "left_radius": 0.0,
+    "right_radius": 0.0,
+    "z0_reference": "left"
+  },
+  "6": {
+    "tool_type": "generic",
+    "last_loaded": 1786917911.107777
+  },
+  "3": {
+    "tool_type": "generic",
+    "last_loaded": 1790283921.1173987
+  },
+  "4": {
+    "tool_type": "generic",
+    "last_loaded": 1787698305.6078873
+  },
+  "2": {
+    "tool_type": "generic",
+    "last_loaded": 1787008950.1082406
+  },
+  "9": {
+    "tool_type": "parting_blade",
+    "last_loaded": 1791313890.6278443,
+    "width": 0.0,
+    "max_depth": 0.0,
+    "left_radius": 0.0,
+    "right_radius": 0.0,
+    "z0_reference": "left"
+  },
+  "10": {
+    "tool_type": "generic",
+    "last_loaded": 1786979292.1079547
+  },
+  "7": {
+    "tool_type": "generic"
+  },
+  "8": {
+    "tool_type": "generic",
+    "last_loaded": 1790455326.6379547
+  }
+}

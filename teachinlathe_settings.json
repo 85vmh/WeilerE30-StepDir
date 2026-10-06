@@ -1,0 +1,4 @@
+{
+  "machine.jog.linear-speed": 6000.0,
+  "rapid_speeds.percentage": 100
+}

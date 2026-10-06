@@ -1,10 +1,10 @@
-T1   P1   X+47.079196 Z-214.264369 Q2 ;
-T2   P2   X+45.896769 Z-200.045981 Q2 ; dcmt
-T3   P3   X+26.606500 Z-198.358969 Q3 ; iscar picco
-T4   P4   X-44.841740 Z-214.377241 Q6 ; parting blade 1.5mm
-T5   P5   X-53.838667 Z-211.818482 Q6 ; parting blade
-T6   P6   X+50.527433 Z-203.868010 Q2 ; vcmt
-T7   P7   X+17.440863 Z-155.793363 Q6 ; boring bar
-T8   P8   X+42.779665 Z+99.695340 Q6 ; sdgj
-T9   P9   X+16.782504 Z-214.920615 Q6 ; threading tool
-T10  P0   X+31.209135 Q7 ; drill tool
+T1   P1   X+49.575000 Z-214.264400 Q2
+T2   P2   X+45.896800 Z-200.046000 Q2 ;dcmt
+T3   P3   X+29.195000 Z-198.359000 Q3 ;iscar picco
+T4   P4   X-44.841700 Z-214.377200 Q6 ;parting blade 1.5mm
+T5   P5   X+46.971331 Z-204.226900 Q6 ;parting blade
+T6   P6   X+50.527400 Z-203.868000 Q2 ;vcmt
+T7   P7   X+17.440900 Z-155.793400 Q6 ;boring bar
+T8   P8   X+42.779700 Z+99.695300 Q6 ;sdgj
+T9   P9   X+48.200000 Z-219.364400 Q6 ;threading tool
+T10  P0   X+34.199500 Q7 ;drill tool

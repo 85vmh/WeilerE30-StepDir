@@ -1,41 +1,46 @@
 # Halshow settings
 # This file is generated automatically.
-wm geometry . 714x856+775+27
+wm geometry . 1260x856+587+60
 placeFrames 0.3163716814159292
 set ::ratio 0.3163716814159292
 set ::old_w_leftf 234
 set ::watchlist {
-    pin+program-state.0.cycleStart
-    pin+program-state.0.cycleAbort
+    pin+program-state.0.statusChuckCoverOpened
+    pin+program-state.0.statusFeedResumeRequired
+    pin+program-state.0.statusIsSingleBlock
+    pin+program-state.0.statusProgramIdle
+    pin+program-state.0.statusProgramPaused
+    pin+program-state.0.statusProgramRunning
+    pin+program-state.0.statusSpindleResumeRequired
+    pin+program-state.0.statusStepPaused
+    pin+program-state.0.statusToolChangeRequired
+    pin+program-state.0.machineOn
     pin+program-state.0.programLoaded
+    pin+program-state.0.programCompleted
+    pin+program-state.0.programAborted
     pin+program-state.0.programIdle
     pin+program-state.0.programPaused
     pin+program-state.0.programRunning
-    pin+program-state.0.singleBlock
-    pin+program-state.0.outputPulseDuration
     pin+program-state.0.startProgram
-    pin+program-state.0.pauseProgram
     pin+program-state.0.stepProgram
     pin+program-state.0.stopProgram
-    pin+program-state.0.cycleStartLedStatus
-    pin+hm2_7i95.0.pwmgen.00.enable
-    pin+hm2_7i95.0.pwmgen.00.value
-    pin+spindle.0.inhibit
-    pin+halui.mode.manual
-    pin+program-state.0.finishedProgram
-    sig+prg.sInhibit
-    sig+ldr.sInhibit
-    pin+manual-weiler.0.spindleOn
-    pin+halui.spindle.0.is-on
+    pin+program-state.0.toolChange
+    pin+program-state.0.toolChanged
     pin+program-state.0.chuckCoverOpened
-    pin+spindle-lubrication.0.forceOn
-    pin+spindle-lubrication.0.lubricate
-    pin+spindle-lubrication.0.machineOn
-    pin+spindle-lubrication.0.offTime
-    pin+spindle-lubrication.0.onTime
-    pin+spindle-lubrication.0.secondsTillOff
+    pin+program-state.0.cycleStart
+    pin+program-state.0.cycleAbort
+    pin+program-state.0.spindleAtSpeed
+    pin+program-state.0.spindleInhibit
+    pin+program-state.0.feedInhibit
     pin+spindle-lubrication.0.secondsTillOn
-    pin+spindle-lubrication.0.time
+    pin+spindle-lubrication.0.secondsTillOff
+    pin+spindle-lubrication.0.forceOn
+    pin+TeachInLathe.handwheels.jog-increment
+    pin+hm2_7i95.0.encoder.05.count
+    pin+hm2_7i95.0.encoder.02.count
+    pin+hm2_7i95.0.encoder.03.count
+    sig+jog-counts-z
+    sig+jog-counts-x
 }
 set ::workmode watchhal
 set ::watchInterval 10
@@ -44,3 +49,4 @@ set ::ffmts
 set ::ifmts 
 set ::alwaysOnTop 0
 set ::autoSaveWatchlist 1
+set ::separateParams 0

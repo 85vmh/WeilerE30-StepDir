@@ -8,8 +8,6 @@
 loadrt encoder          names=mpg.encoder-x,mpg.encoder-z
 loadrt ilowpass         names=mpg.lowpass-x,mpg.lowpass-z
 loadrt mux4             names=mux.increment
-loadrt anglejog         names=anglejog-x,anglejog-z
-loadrt scaled_s32_sums  names=sincounts,coscounts
 loadrt mux2s32          names=x-counts,z-counts
 
 #Get rid of ilowpass and add joint.n.jog-accel-fraction and axis.n.jog-accel-fraction
@@ -22,19 +20,6 @@ addf mpg.lowpass-x              servo-thread
 addf mpg.lowpass-z              servo-thread
 addf mux.increment              servo-thread
 addf divider                    servo-thread
-addf anglejog-x                   servo-thread
-addf anglejog-z                   servo-thread
-addf sincounts                  servo-thread
-addf coscounts                  servo-thread
-
-
-setp anglejog-x.max-vel           50
-setp anglejog-x.max-accel         150
-setp anglejog-x.angle-degrees-in  -45
-
-setp anglejog-z.max-vel           50
-setp anglejog-z.max-accel         150
-setp anglejog-z.angle-degrees-in  45
 
 setp mpg.lowpass-x.scale 1250  #10000 divided by 4*2 (due to diameter mode)
 setp mpg.lowpass-z.scale -2500  #10000 divided by 4 
@@ -57,19 +42,11 @@ setp joint.1.jog-vel-mode 1
 setp joint.0.jog-enable 1 
 setp joint.1.jog-enable 1
 
-net mpg.x-jog-count  hm2_7i95.0.encoder.02.count  => mpg.lowpass-x.in   anglejog-x.counts-in
-net mpg.z-jog-count  hm2_7i95.0.encoder.03.count  => mpg.lowpass-z.in   anglejog-z.counts-in
+net mpg.x-jog-count  hm2_7i95.0.encoder.02.count  => mpg.lowpass-x.in
+net mpg.z-jog-count  hm2_7i95.0.encoder.03.count  => mpg.lowpass-z.in
 
 net mpg.x-filtered-counts  mpg.lowpass-x.out => x-counts.in0
 net mpg.z-filtered-counts  mpg.lowpass-z.out => z-counts.in0
-
-net cos-x anglejog-x.coscounts => coscounts.in0  
-net cos-z anglejog-z.coscounts => coscounts.in1
-net cos-xz coscounts.out-s  => x-counts.in1
-
-net sin-x anglejog-x.sincounts => sincounts.in0  
-net sin-z anglejog-z.sincounts => sincounts.in1
-net sin-xz sincounts.out-s  => z-counts.in1 
 
 net jog-counts-x  x-counts.out => axis.x.jog-counts    joint.0.jog-counts
 net jog-counts-z  z-counts.out => axis.z.jog-counts    joint.1.jog-counts
@@ -87,9 +64,7 @@ net in.jog-increment-b => mux.increment.sel1
 net mpg.increment  <= mux.increment.out
 net mpg.increment  => axis.x.jog-scale  axis.z.jog-scale  
 net mpg.increment  => joint.0.jog-scale  joint.1.jog-scale
-# net mpg.increment  => anglejog-x.scale-in anglejog-z.scale-in
 net mpg.increment  => divider.in0
 
-
 setp divider.in1  10000
-net mpg.readable-increment  divider.out anglejog-x.scale-in anglejog-z.scale-in
+net mpg.readable-increment  divider.out
