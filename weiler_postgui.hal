@@ -93,3 +93,10 @@ net tool:changed    =>  TeachInLathe.tool-change.changed
 
 net tool:number     iocontrol.0.tool-prep-number    =>  TeachInLathe.tool-change.number
 net tool:prepare    iocontrol.0.tool-prepare        =>  iocontrol.0.tool-prepared
+
+# Tool change position set on the Manual Turning tab (machine coordinates, X a radius).
+# With enable off, M6 goes to [EMCIO]TOOL_CHANGE_POSITION. TeachInLathe's pins are listed
+# first, so a position the app has already set is not overwritten by iocontrol's INI defaults.
+net tool:change-pos-x       TeachInLathe.tool-change.position.x         iocontrol.0.tool-change-pos-x
+net tool:change-pos-z       TeachInLathe.tool-change.position.z         iocontrol.0.tool-change-pos-z
+net tool:change-pos-enable  TeachInLathe.tool-change.position.enable    iocontrol.0.tool-change-pos-enable
