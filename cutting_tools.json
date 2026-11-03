@@ -1,0 +1,149 @@
+[
+    {
+        "cutting_tool_id": 1,
+        "type": "turning",
+        "insert": {
+            "geometry": "wnmg",
+            "size": "06",
+            "radius": "02"
+        },
+        "orientation": 2,
+        "front_angle": 95.0,
+        "back_angle": 5.0,
+        "spindle_direction": 3
+    },
+    {
+        "cutting_tool_id": 2,
+        "type": "turning",
+        "insert": {
+            "geometry": "dcmt",
+            "size": "11",
+            "radius": "04"
+        },
+        "orientation": 2,
+        "front_angle": 93.0,
+        "back_angle": 32.0,
+        "spindle_direction": 4
+    },
+    {
+        "cutting_tool_id": 3,
+        "type": "turning",
+        "insert": {
+            "geometry": "vbmt",
+            "size": "16",
+            "radius": "04"
+        },
+        "orientation": 6,
+        "front_angle": 72.5,
+        "back_angle": 72.5,
+        "spindle_direction": 4
+    },
+    {
+        "cutting_tool_id": 4,
+        "type": "boring",
+        "insert": {
+            "geometry": "ccmt",
+            "size": "06",
+            "radius": "02"
+        },
+        "orientation": 6,
+        "front_angle": 5.0,
+        "back_angle": 5.0,
+        "solid_body": {
+            "tip_angle": 50.0,
+            "diameter": 5.0,
+            "max_radial_undercut": 3.0
+        },
+        "spindle_direction": 4
+    },
+    {
+        "cutting_tool_id": 5,
+        "type": "boring",
+        "insert": {
+            "geometry": "ccmt",
+            "size": "09",
+            "radius": "04"
+        },
+        "orientation": 6,
+        "front_angle": 5.0,
+        "back_angle": 5.0,
+        "solid_body": {
+            "tip_angle": 50.0,
+            "diameter": 10.0,
+            "max_radial_undercut": 6.0
+        },
+        "spindle_direction": 4
+    },
+    {
+        "cutting_tool_id": 6,
+        "type": "blade",
+        "blade_width": 3.0,
+        "left_radius": 0.5,
+        "right_radius": 0.5,
+        "orientation": 6,
+        "spindle_direction": 3
+    },
+    {
+        "cutting_tool_id": 7,
+        "type": "blade",
+        "blade_width": 2.0,
+        "left_radius": 0.2,
+        "right_radius": 0.2,
+        "orientation": 6,
+        "spindle_direction": 4
+    },
+    {
+        "cutting_tool_id": 8,
+        "type": "threading",
+        "insert": {
+            "geometry": "ER",
+            "size": "16",
+            "radius": "02"
+        },
+        "orientation": 6,
+        "pitch": 3.0,
+        "spindle_direction": 3
+    },
+    {
+        "cutting_tool_id": 9,
+        "type": "threading",
+        "insert": {
+            "geometry": "IR",
+            "size": "16",
+            "radius": "02"
+        },
+        "orientation": 8,
+        "pitch": 1.5,
+        "spindle_direction": 4
+    },
+    {
+        "cutting_tool_id": 10,
+        "type": "drilling",
+        "diameter": 10.0,
+        "tip_angle": 118.0,
+        "twist_direction": "right_hand",
+        "spindle_direction": 3
+    },
+    {
+        "cutting_tool_id": 11,
+        "type": "drilling",
+        "diameter": 6.8,
+        "tip_angle": 118.0,
+        "twist_direction": "right_hand",
+        "spindle_direction": 3
+    },
+    {
+        "cutting_tool_id": 12,
+        "type": "tapping",
+        "diameter": 10.0,
+        "pitch": 1.5,
+        "twist_direction": "right_hand",
+        "spindle_direction": 3
+    },
+    {
+        "cutting_tool_id": 13,
+        "type": "reaming",
+        "diameter": 10.0,
+        "spindle_direction": 4
+    }
+]
