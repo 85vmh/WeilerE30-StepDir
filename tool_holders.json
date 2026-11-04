@@ -1,0 +1,59 @@
+{
+    "tool_holders": [
+        {
+            "tool_holder_id": 1,
+            "orientation": "radial",
+            "cutting_tool_id": 1,
+            "x_touched": true,
+            "z_touched": true,
+            "z_offset_place": null,
+            "last_loaded": 1792633603.2193708
+        },
+        {
+            "tool_holder_id": 2,
+            "orientation": "radial",
+            "cutting_tool_id": 8,
+            "x_touched": true,
+            "z_touched": true,
+            "z_offset_place": null,
+            "last_loaded": 1792633604.4913504
+        },
+        {
+            "tool_holder_id": 3,
+            "orientation": "axial",
+            "cutting_tool_id": 6,
+            "x_touched": true,
+            "z_touched": true,
+            "z_offset_place": "-1",
+            "last_loaded": 1792633605.2824779
+        },
+        {
+            "tool_holder_id": 4,
+            "orientation": "radial",
+            "cutting_tool_id": null,
+            "x_touched": false,
+            "z_touched": false,
+            "z_offset_place": null,
+            "last_loaded": null
+        },
+        {
+            "tool_holder_id": 5,
+            "orientation": "axial",
+            "cutting_tool_id": null,
+            "x_touched": false,
+            "z_touched": false,
+            "z_offset_place": null,
+            "last_loaded": null
+        },
+        {
+            "tool_holder_id": 6,
+            "orientation": "radial",
+            "cutting_tool_id": null,
+            "x_touched": false,
+            "z_touched": false,
+            "z_offset_place": null,
+            "last_loaded": null
+        }
+    ],
+    "current_loaded_tool": 3
+}

@@ -41,6 +41,8 @@ set ::watchlist {
     pin+hm2_7i95.0.encoder.03.count
     sig+jog-counts-z
     sig+jog-counts-x
+    pin+halui.feed-override.value
+    pin+spindle.0.at-speed
 }
 set ::workmode watchhal
 set ::watchInterval 10
